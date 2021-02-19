@@ -7,14 +7,17 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ipaddress = "0.1.0"
-toml = "0.5.0"
-serde = { version = "1.0", features = ["derive"] }
-rand = "0.8.0"
-re = "0.1.0"
-log = "0.4.0"
-simplelog = "0.9.0"
-lettre = "0.9.0"
-rpassword = "5.0.0"
-subprocess = "0.2.0"
+exec = "0.3.1"
 home = "0.5.0"
+ipaddress = "0.1.2"
+lettre = "0.9.5"
+lettre_email = "0.9"
+log = "0.4.0"
+native-tls = "0.2.7"
+rand = "0.8.3"
+regex = "1.0.0"
+serde = { version = "1.0", features = ["derive"] }
+simplelog = "0.9.0"
+subprocess = "0.2.0"
+toml = "0.5.8"
+users = "0.11.0"

@@ -1,3 +1,4 @@
+use exec::Command;
 use serde::Deserialize;
 use std::fs::File;
 use std::fs::OpenOptions;
@@ -21,18 +22,19 @@ struct SecRc {
 }
 
 /// Representing a sib secure shell configuration
+/// Authenticator parameters are public
 #[derive(Debug)]
 pub struct Config {
-    accepted_ips: Vec<String>,
-    email: String,
+    pub accepted_ips: Vec<String>,
+    pub email: String,
     shell: String,
     shell_args: String,
     log_file: String,
     tmpdir: String,
-    mail_host: String,
-    mail_port: u16,
-    mail_from: String,
-    mail_passwdcmd: String,
+    pub mail_host: String,
+    pub mail_port: u16,
+    pub mail_from: String,
+    pub mail_passwdcmd: String,
 }
 
 impl Config {
@@ -106,12 +108,36 @@ impl Config {
         }
     }
 
+    /// Open the log file specified in the config in append mode
     pub fn open_log(&self) -> io::Result<File> {
         let mut logfile_open_options = OpenOptions::new();
         logfile_open_options
             .create(true)
             .append(true)
             .open(&self.log_file)
+    }
+
+    pub fn execute_shell(&self) -> Result<(), String> {
+        let args: Vec<String> = self
+            .shell_args
+            .split_whitespace()
+            .map(|x| x.to_string())
+            .collect();
+
+        match search_shells(&self.shell) {
+            Ok(found) => {
+                if !found {
+                    return Err("non-standard shell".to_string());
+                }
+            }
+            Err(e) => {
+                warn!("Cannot search for shells: {:?}", e);
+            }
+        };
+        Err(format!(
+            "Cannot execute shell{:?}",
+            Command::new(self.shell.clone()).args(&args).exec()
+        ))
     }
 }
 
@@ -140,4 +166,17 @@ impl Default for Config {
             mail_passwdcmd: String::from("echo 123456"),
         }
     }
+}
+
+fn search_shells(shell_name: &str) -> io::Result<bool> {
+    const SHELLS_FILE: &'static str = "/etc/shells";
+    let mut shells_content = String::new();
+    let mut found = false;
+    File::open(SHELLS_FILE)?.read_to_string(&mut shells_content)?;
+    for shell in shells_content.split_whitespace() {
+        if shell == shell_name {
+            found = true;
+        }
+    }
+    Ok(found)
 }
