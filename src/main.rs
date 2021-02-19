@@ -18,6 +18,7 @@ mod config;
 mod error;
 mod extend_lettre;
 mod ip;
+mod parse_args;
 
 use crate::auth::Authenticator;
 use simplelog::{
@@ -29,12 +30,25 @@ use users::get_current_username;
 fn do_check_auth<'a>(
     authenticator: &impl auth::Authenticator<'a>,
     configuration: &config::Config,
-    cmdline: Option<String>,
 ) -> Result<(), String> {
-    match authenticator.is_accepted(cmdline) {
+    // First see whether -c is supplied
+    let options = parse_args::parse_args();
+    let mut other_options = options.1;
+    let mut exec_options: Vec<String> = Vec::new();
+    let is_accepted = match options.0 {
+        Some(mut cmd) => {
+            let tmp = authenticator.is_accepted_exec(&mut cmd);
+            exec_options.push(String::from("-c"));
+            exec_options.push(cmd);
+            tmp
+        }
+        None => authenticator.is_accepted_login(),
+    };
+    exec_options.append(&mut other_options);
+    match is_accepted {
         Some(value) => {
             if value {
-                configuration.execute_shell()
+                configuration.execute_shell(exec_options)
             } else {
                 Err("Rejected".to_string())
             }
@@ -80,21 +94,18 @@ fn main() {
     do_check_auth(
         &auth::BypassAuthenticator::init(&configuration),
         &configuration,
-        None,
     )
     .or_else(print_err_exit)
     .ok();
     do_check_auth(
         &auth::LocalIPAuthenticator::init(&configuration),
         &configuration,
-        None,
     )
     .or_else(print_err_exit)
     .ok();
     do_check_auth(
         &auth::EmailAuthenticator::init(&configuration),
         &configuration,
-        None,
     )
     .or_else(print_err_exit)
     .ok();

@@ -6,7 +6,9 @@ use lettre::smtp::authentication::Credentials;
 use lettre::Transport;
 use lettre_email::EmailBuilder;
 use rand::Rng;
-use std::io::{stdin, stdout, Write};
+use std::fs::File;
+use std::io::{stdin, stdout, Read, Write};
+use std::path::PathBuf;
 use subprocess::{Exec, Redirection};
 
 /// Trait for authenticate providers
@@ -19,12 +21,11 @@ pub trait Authenticator<'auth> {
     /// None is cancelled
     /// CMD is supplied only when -c cmdline is used and contains the
     /// argument to -c
-    fn is_accepted(&self, cmd: Option<String>) -> Option<bool>;
-    /// Returns whether this can be used non-interactively
+    fn is_accepted_login(&self) -> Option<bool>;
+    /// Check if the execute request is accepted by this authenticator
+    /// The modified (if any) command line is put back into cmd
     /// i.e. when -c cmdline is supplied
-    fn non_interactive(&self) -> bool {
-        false
-    }
+    fn is_accepted_exec(&self, cmd: &mut String) -> Option<bool>;
 }
 
 pub struct EmailAuthenticator<'a> {
@@ -96,7 +97,7 @@ impl<'a> Authenticator<'a> for EmailAuthenticator<'a> {
         }
     }
 
-    fn is_accepted(&self, _cmd: Option<String>) -> Option<bool> {
+    fn is_accepted_login(&self) -> Option<bool> {
         // Make a shadowed email
         let email = &self.config.email;
         let namelen = email.rfind('@')?;
@@ -164,6 +165,45 @@ impl<'a> Authenticator<'a> for EmailAuthenticator<'a> {
         warn!("Maximum number of retries exceeded");
         Some(false)
     }
+
+    fn is_accepted_exec(&self, cmd: &mut String) -> Option<bool> {
+        let mut sib_code_file = PathBuf::from(&self.config.tmpdir);
+        sib_code_file.push("sib_code");
+        if *cmd == self.config.email {
+            // Send auth code
+            if let Err(error) = self.send_email("") {
+                error!("{}", error);
+            }
+            // Write the generated code
+            match File::create(sib_code_file) {
+                Ok(mut file) => {
+                    file.write(&self.code.to_string().as_bytes()).ok();
+                }
+                // This is certainlty unwanted
+                Err(e) => error!("Create code file failed: {}", e),
+            }
+            // Cancel execution
+            return Some(false);
+        }
+        match File::open(sib_code_file) {
+            Ok(mut file) => {
+                let mut code = String::new();
+                file.read_to_string(&mut code).ok()?;
+                if cmd[0..6] == code {
+                    // Remove the code
+                    *cmd = cmd[6..cmd.len()].to_string();
+                    Some(true)
+                } else {
+                    None
+                }
+            }
+            Err(e) => {
+                // It's probably just chaining to the next authenticator
+                info!("Cannot open code file: {}", e);
+                None
+            }
+        }
+    }
 }
 
 pub struct LocalIPAuthenticator<'a> {
@@ -175,7 +215,7 @@ impl<'a> Authenticator<'a> for LocalIPAuthenticator<'a> {
         LocalIPAuthenticator { config: config }
     }
 
-    fn is_accepted(&self, _cmd: Option<String>) -> Option<bool> {
+    fn is_accepted_login(&self) -> Option<bool> {
         let checking = match IPAddress::parse(get_from_ip()) {
             Ok(ok) => ok,
             Err(_e) => return None,
@@ -195,8 +235,8 @@ impl<'a> Authenticator<'a> for LocalIPAuthenticator<'a> {
         None
     }
 
-    fn non_interactive(&self) -> bool {
-        true
+    fn is_accepted_exec(&self, _cmd: &mut String) -> Option<bool> {
+        self.is_accepted_login()
     }
 }
 
@@ -207,7 +247,7 @@ impl Authenticator<'_> for BypassAuthenticator {
         BypassAuthenticator {}
     }
 
-    fn is_accepted(&self, _cmd: Option<String>) -> Option<bool> {
+    fn is_accepted_login(&self) -> Option<bool> {
         if let Some(mut home_dir) = home::home_dir() {
             home_dir.push("NoSec");
             if home_dir.exists() {
@@ -217,7 +257,7 @@ impl Authenticator<'_> for BypassAuthenticator {
         None
     }
 
-    fn non_interactive(&self) -> bool {
-        true
+    fn is_accepted_exec(&self, _cmd: &mut String) -> Option<bool> {
+        self.is_accepted_login()
     }
 }

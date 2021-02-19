@@ -30,7 +30,7 @@ pub struct Config {
     shell: String,
     shell_args: String,
     log_file: String,
-    tmpdir: String,
+    pub tmpdir: String,
     pub mail_host: String,
     pub mail_port: u16,
     pub mail_from: String,
@@ -117,12 +117,13 @@ impl Config {
             .open(&self.log_file)
     }
 
-    pub fn execute_shell(&self) -> Result<(), String> {
-        let args: Vec<String> = self
+    pub fn execute_shell(&self, mut additional_params: Vec<String>) -> Result<(), String> {
+        let mut args: Vec<String> = self
             .shell_args
             .split_whitespace()
             .map(|x| x.to_string())
             .collect();
+        args.append(&mut additional_params);
 
         match search_shells(&self.shell) {
             Ok(found) => {
