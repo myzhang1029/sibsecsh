@@ -229,6 +229,7 @@ impl<'a> Authenticator<'a> for LocalIPAuthenticator<'a> {
                 }
             };
             if ipaddress.includes(&checking) {
+                warn!("Local login accepted");
                 return Some(true);
             }
         }
@@ -251,8 +252,13 @@ impl Authenticator<'_> for BypassAuthenticator {
         if let Some(mut home_dir) = home::home_dir() {
             home_dir.push("NoSec");
             if home_dir.exists() {
+                warn!("Sibsecsh turned off");
                 return Some(true);
             }
+        }
+        if let Ok(_value) = std::env::var("SIB_FROM_IP") {
+            warn!("Nested login accepted");
+            return Some(true);
         }
         None
     }

@@ -1,5 +1,7 @@
 use exec::Command;
+use crate::ip::get_from_ip;
 use serde::Deserialize;
+use std::env;
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io;
@@ -124,6 +126,7 @@ impl Config {
             .map(|x| x.to_string())
             .collect();
         args.append(&mut additional_params);
+        env::set_var("SIB_FROM_IP", get_from_ip());
 
         match search_shells(&self.shell) {
             Ok(found) => {
