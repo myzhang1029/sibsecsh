@@ -997,7 +997,7 @@ dependencies = [
 
 [[package]]
 name = "sibsecsh"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "exec",
  "home",

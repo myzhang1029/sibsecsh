@@ -117,5 +117,5 @@ fn main() {
     )
     .or_else(print_err_exit)
     .ok();
-    panic_gracefully!("Sorry: Auth failed");
+    panic_gracefully!("Sorry: All authenticators skipped");
 }

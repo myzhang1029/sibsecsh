@@ -5,7 +5,7 @@ use lettre::smtp::authentication::Credentials;
 use lettre::Transport;
 use lettre_email::EmailBuilder;
 use rand::Rng;
-use std::fs::{File, remove_file};
+use std::fs::{remove_file, File};
 use std::io::{stdin, stdout, Read, Write};
 use std::path::PathBuf;
 use subprocess::{Exec, Redirection};

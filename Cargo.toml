@@ -1,6 +1,6 @@
 [package]
 name = "sibsecsh"
-version = "0.2.1"
+version = "0.3.0"
 authors = ["Zhang Maiyun <myzhang1029@hotmail.com>"]
 edition = "2018"
 
