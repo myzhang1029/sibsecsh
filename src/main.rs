@@ -13,6 +13,8 @@ extern crate toml;
 extern crate users;
 
 mod auth;
+mod auth_email;
+mod auth_totp;
 mod config;
 #[macro_use]
 mod error;
@@ -75,7 +77,7 @@ fn main() {
         .build();
 
     if let Err(e) = CombinedLogger::init(vec![
-        TermLogger::new(LevelFilter::Warn, log_format.clone(), TerminalMode::Mixed),
+        TermLogger::new(LevelFilter::Error, log_format.clone(), TerminalMode::Mixed),
         WriteLogger::new(LevelFilter::Info, log_format, log_file),
     ]) {
         panic_gracefully!("Cannot create logger: {:?}", e);
@@ -104,7 +106,13 @@ fn main() {
     .or_else(print_err_exit)
     .ok();
     do_check_auth(
-        &auth::EmailAuthenticator::init(&configuration),
+        &auth_email::EmailAuthenticator::init(&configuration),
+        &configuration,
+    )
+    .or_else(print_err_exit)
+    .ok();
+    do_check_auth(
+        &auth_totp::TotpAuthenticator::init(&configuration),
         &configuration,
     )
     .or_else(print_err_exit)

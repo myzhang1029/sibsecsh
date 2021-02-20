@@ -1,5 +1,5 @@
-use exec::Command;
 use crate::ip::get_from_ip;
+use exec::Command;
 use serde::Deserialize;
 use std::env;
 use std::fs::File;
@@ -21,6 +21,10 @@ struct SecRc {
     mail_port: Option<u16>,
     mail_from: Option<String>,
     mail_passwdcmd: Option<String>,
+    totp_secret: Option<String>,
+    totp_digits: Option<u32>,
+    totp_timestep: Option<u64>,
+    totp_hash: Option<String>,
 }
 
 /// Representing a sib secure shell configuration
@@ -37,6 +41,10 @@ pub struct Config {
     pub mail_port: u16,
     pub mail_from: String,
     pub mail_passwdcmd: String,
+    pub totp_secret: String,
+    pub totp_digits: u32,
+    pub totp_timestep: u64,
+    pub totp_hash: String,
 }
 
 impl Config {
@@ -75,6 +83,18 @@ impl Config {
         }
         if let Some(mail_passwdcmd) = toml_content.mail_passwdcmd {
             self.mail_passwdcmd = mail_passwdcmd;
+        }
+        if let Some(totp_secret) = toml_content.totp_secret {
+            self.totp_secret = totp_secret;
+        }
+        if let Some(totp_digits) = toml_content.totp_digits {
+            self.totp_digits = totp_digits;
+        }
+        if let Some(totp_timestep) = toml_content.totp_timestep {
+            self.totp_timestep = totp_timestep;
+        }
+        if let Some(totp_hash) = toml_content.totp_hash {
+            self.totp_hash = totp_hash;
         }
         Ok(())
     }
@@ -168,6 +188,10 @@ impl Default for Config {
             mail_port: 587,
             mail_from: String::from("from@example.com"),
             mail_passwdcmd: String::from("echo 123456"),
+            totp_secret: String::from("42"),
+            totp_digits: 6,
+            totp_timestep: 30,
+            totp_hash: String::from("SHA1"),
         }
     }
 }
