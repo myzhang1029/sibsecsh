@@ -175,6 +175,7 @@ impl<'a> Authenticator<'a> for EmailAuthenticator<'a> {
             Ok(mut file) => {
                 let mut code = String::new();
                 file.read_to_string(&mut code).ok()?;
+                code = code.trim().to_string();
                 // If cmd is shorter that 6 chars it's always bad
                 if cmd.len() >= 6 && cmd[0..6] == code {
                     // Remove the code from cmd
@@ -182,6 +183,7 @@ impl<'a> Authenticator<'a> for EmailAuthenticator<'a> {
                     remove_file(&sib_code_file).ok();
                     Some(true)
                 } else {
+                    warn!("Read {:?} from code file, found {:?}", code, &cmd[0..6]);
                     None
                 }
             }

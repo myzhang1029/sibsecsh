@@ -11,18 +11,6 @@ pub struct TotpAuthenticator<'a> {
 impl<'a> TotpAuthenticator<'a> {
     fn compare_code(&self, code: u64) -> Option<bool> {
         // XXX: 90secs
-        println!(
-            "{:?}{}",
-            self.config,
-            totp_now(
-                &self.config.totp_secret,
-                self.config.totp_digits,
-                0,
-                self.config.totp_timestep,
-                &self.hashtype,
-            )
-            .err()?
-        );
         Some(
             code == totp_now(
                 &self.config.totp_secret,
