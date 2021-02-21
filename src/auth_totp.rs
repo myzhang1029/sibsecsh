@@ -1,6 +1,7 @@
 use crate::auth::Authenticator;
 use crate::config::Config;
-use oath::{totp_now, HashType};
+use oath::{totp_raw_custom_time, HashType};
+use std::time::{UNIX_EPOCH, SystemTime};
 use std::io::{stdin, stdout, Write};
 
 pub struct TotpAuthenticator<'a> {
@@ -9,18 +10,26 @@ pub struct TotpAuthenticator<'a> {
 }
 
 impl<'a> TotpAuthenticator<'a> {
+    /// Compares a TOTP code with the correct one, tolerating the one before
+    /// and the one after to take networking and time inaccuracy into account.
     fn compare_code(&self, code: u64) -> Option<bool> {
-        // XXX: 90secs
-        Some(
-            code == totp_now(
-                &b64_to_hex(&self.config.totp_secret)?,
-                self.config.totp_digits,
-                0,
-                self.config.totp_timestep,
-                &self.hashtype,
-            )
-            .ok()?,
-        )
+        // Get UNIX time
+        let now: u64 = match SystemTime::now().duration_since(UNIX_EPOCH) {
+            Ok(time_now) => time_now.as_secs(),
+            Err(_e) => {
+                error!("Earlier than 1970-01-01 00:00:00 UTC");
+                return None;
+            },
+        };
+        // Error would have been logged
+        let secret = b64_to_bytes(&self.config.totp_secret)?;
+        // code_1 is the most likely
+        let code_1 = totp_raw_custom_time(&secret, self.config.totp_digits, 0, self.config.totp_timestep, now, &self.hashtype);
+        // code_2 is also likely
+        let code_2 = totp_raw_custom_time(&secret, self.config.totp_digits, 0, self.config.totp_timestep, now - 30, &self.hashtype);
+        // code_3 is not so likely
+        let code_3 = totp_raw_custom_time(&secret, self.config.totp_digits, 0, self.config.totp_timestep, now + 30, &self.hashtype);
+        Some(code == code_1 || code == code_2 || code == code_3)
     }
 }
 
@@ -85,6 +94,50 @@ impl<'a> Authenticator<'a> for TotpAuthenticator<'a> {
     }
 }
 
+fn b64_to_bytes(b64: &str) -> Option<Vec<u8>> {
+    let no_equal = b64.trim_end_matches('=').to_uppercase();
+    let num_padded_zero: u8 = match b64.len() - no_equal.len() {
+        0 => 0, // not padded
+        1 => 3, // = indicates three padded zeroes
+        3 => 1, // === indicates one padded zero
+        4 => 4, // ==== indicates four padded zeroes
+        6 => 2, // ====== indicates two padded zeroes
+        _ => {
+            error!("Invalid base32 padding");
+            return None;
+        }
+    };
+    let mut result: Vec<u8> = Vec::with_capacity(b64.len() * 5 / 8);
+    let mut buf_cur: u16 = 0;
+    let mut bits_have: u8 = 0;
+    for (i, ch) in no_equal.chars().enumerate() {
+        let value_ch = if ch.is_ascii_alphabetic() {
+            (ch as u8) - ('A' as u8) // 'A' becomes 0
+        } else if ch.is_digit(8) && ch != '0' && ch != '1' {
+            (ch as u8) - ('2' as u8) + 26 // '2' becomes 26
+        } else {
+            return None;
+        };
+        buf_cur = (buf_cur << 5) + (value_ch as u16);
+        bits_have += 5;
+        if i == no_equal.len() - 1 {
+            // Remove padded zeroes
+            buf_cur >>= num_padded_zero;
+            bits_have -= num_padded_zero;
+        }
+        while bits_have >= 8 {
+            bits_have -= 8;
+            // Discarding the bits on the right, keeping 8 bits. Use u16
+            // to be type-consistent
+            let value: u16 = buf_cur >> bits_have;
+            buf_cur -= value << bits_have; // Remove processed bits
+            result.push(value as u8); // No overflow should occur
+        }
+    }
+    Some(result)
+}
+
+/* Not used anymore, kept for reference.
 fn b64_to_hex(b64: &str) -> Option<String> {
     //const conversion: &'static str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
     const HEX_TABLE: &'static str = "0123456789ABCDEF";
@@ -100,7 +153,7 @@ fn b64_to_hex(b64: &str) -> Option<String> {
             return None;
         }
     };
-    let mut result = String::with_capacity(b64.len() * 5 / 4 + 1);
+    let mut result = String::with_capacity(b64.len() * 5 / 4);
     let mut buf_cur: u8 = 0;
     let mut bits_have: u8 = 0;
     for (i, ch) in no_equal.chars().enumerate() {
@@ -127,3 +180,4 @@ fn b64_to_hex(b64: &str) -> Option<String> {
     }
     Some(result)
 }
+*/
