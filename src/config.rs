@@ -139,6 +139,7 @@ impl Config {
             .open(&self.log_file)
     }
 
+    /// Execute the configured shell, replacing the current process
     pub fn execute_shell(&self, mut additional_params: Vec<String>) -> Result<(), String> {
         let mut args: Vec<String> = self
             .shell_args

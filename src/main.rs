@@ -1,3 +1,6 @@
+//! sibsecsh is a two factor authentication application designed to be used
+//! as the login shell. It acts as a wrapper around the actual shell process.
+
 extern crate home;
 extern crate ipaddress;
 extern crate lettre;
