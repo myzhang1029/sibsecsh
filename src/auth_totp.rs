@@ -1,8 +1,8 @@
 use crate::auth::Authenticator;
 use crate::config::Config;
 use oath::{totp_raw_custom_time, HashType};
-use std::time::{UNIX_EPOCH, SystemTime};
 use std::io::{stdin, stdout, Write};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 pub struct TotpAuthenticator<'a> {
     config: &'a Config,
@@ -19,16 +19,37 @@ impl<'a> TotpAuthenticator<'a> {
             Err(_e) => {
                 error!("Earlier than 1970-01-01 00:00:00 UTC");
                 return None;
-            },
+            }
         };
         // Error would have been logged
         let secret = b64_to_bytes(&self.config.totp_secret)?;
         // code_1 is the most likely
-        let code_1 = totp_raw_custom_time(&secret, self.config.totp_digits, 0, self.config.totp_timestep, now, &self.hashtype);
+        let code_1 = totp_raw_custom_time(
+            &secret,
+            self.config.totp_digits,
+            0,
+            self.config.totp_timestep,
+            now,
+            &self.hashtype,
+        );
         // code_2 is also likely
-        let code_2 = totp_raw_custom_time(&secret, self.config.totp_digits, 0, self.config.totp_timestep, now - 30, &self.hashtype);
+        let code_2 = totp_raw_custom_time(
+            &secret,
+            self.config.totp_digits,
+            0,
+            self.config.totp_timestep,
+            now - 30,
+            &self.hashtype,
+        );
         // code_3 is not so likely
-        let code_3 = totp_raw_custom_time(&secret, self.config.totp_digits, 0, self.config.totp_timestep, now + 30, &self.hashtype);
+        let code_3 = totp_raw_custom_time(
+            &secret,
+            self.config.totp_digits,
+            0,
+            self.config.totp_timestep,
+            now + 30,
+            &self.hashtype,
+        );
         Some(code == code_1 || code == code_2 || code == code_3)
     }
 }

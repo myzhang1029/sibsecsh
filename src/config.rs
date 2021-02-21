@@ -189,7 +189,7 @@ impl Default for Config {
             mail_port: 587,
             mail_from: String::from("from@example.com"),
             mail_passwdcmd: String::from("echo 123456"),
-            totp_secret: String::from("-"),// Non-base32 string disables this authenticator
+            totp_secret: String::from("-"), // Non-base32 string disables this authenticator
             totp_digits: 6,
             totp_timestep: 30,
             totp_hash: String::from("SHA1"),
