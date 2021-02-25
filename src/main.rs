@@ -108,9 +108,9 @@ fn main() {
         Ok(_) => (),
         Err(_) => warn!("No configuration supplied!"),
     }
-    const UNKNOWN: &'static str = "unknown user";
+    const UNKNOWN: &str = "unknown user";
     let username = get_current_username()
-        .or(Some(OsString::from(UNKNOWN)))
+        .or_else(|| Some(OsString::from(UNKNOWN)))
         .unwrap();
     let username = username.to_str().or(Some(UNKNOWN)).unwrap();
     info!("Login attempt from {} for {}", ip::get_from_ip(), username);

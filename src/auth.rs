@@ -43,7 +43,7 @@ pub struct LocalIPAuthenticator<'a> {
 
 impl<'a> Authenticator<'a> for LocalIPAuthenticator<'a> {
     fn init(config: &'a Config) -> Self {
-        LocalIPAuthenticator { config: config }
+        LocalIPAuthenticator { config }
     }
 
     fn is_accepted_login(&self) -> Option<bool> {

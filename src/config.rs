@@ -123,20 +123,20 @@ impl Config {
         let mut found_any = false;
 
         for filename in ["/etc/secrc", "/etc/secrc.toml"].iter() {
-            if let Ok(_) = self.parse_config(&filename) {
+            if self.parse_config(&filename).is_ok() {
                 found_any = true;
             }
         }
         if let Some(mut home_dir) = home::home_dir() {
             home_dir.push(".secrc");
             if let Some(path_str) = home_dir.to_str() {
-                if let Ok(_) = self.parse_config(&path_str) {
+                if self.parse_config(&path_str).is_ok() {
                     found_any = true;
                 }
             }
             home_dir.set_extension("toml");
             if let Some(path_str) = home_dir.to_str() {
-                if let Ok(_) = self.parse_config(&path_str) {
+                if self.parse_config(&path_str).is_ok() {
                     found_any = true;
                 }
             }
@@ -202,7 +202,7 @@ impl Default for Config {
             shell: String::from("/bin/zsh"),
             shell_args: String::from("--login"),
             log_file: String::from("/var/log/sibsecsh.log"),
-            tmpdir: tmpdir,
+            tmpdir,
             mail_host: String::from("smtp.example.com"),
             mail_port: 587,
             mail_from: String::from("from@example.com"),
@@ -216,7 +216,7 @@ impl Default for Config {
 }
 
 fn search_shells(shell_name: &str) -> io::Result<bool> {
-    const SHELLS_FILE: &'static str = "/etc/shells";
+    const SHELLS_FILE: &str = "/etc/shells";
     let mut shells_content = String::new();
     let mut found = false;
     File::open(SHELLS_FILE)?.read_to_string(&mut shells_content)?;

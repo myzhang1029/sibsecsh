@@ -36,8 +36,7 @@ pub struct EmailAuthenticator<'a> {
 impl<'a> EmailAuthenticator<'a> {
     fn gen_code() -> u32 {
         let mut rng = rand::thread_rng();
-        let number = rng.gen_range(100000..1000000);
-        number
+        rng.gen_range(100000..1000000)
     }
 
     fn read_password(&self) -> Result<String, String> {
@@ -92,8 +91,8 @@ impl<'a> Authenticator<'a> for EmailAuthenticator<'a> {
     fn init(config: &'a Config) -> Self {
         let code = EmailAuthenticator::gen_code();
         EmailAuthenticator {
-            config: config,
-            code: code,
+            config,
+            code,
         }
     }
 
@@ -119,7 +118,7 @@ impl<'a> Authenticator<'a> for EmailAuthenticator<'a> {
                 return None;
             }
             input = input.trim_end().to_string();
-            if input == "" {
+            if input.is_empty() {
                 // Skip this authenticator
                 return None;
             }

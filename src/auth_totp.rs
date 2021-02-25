@@ -85,8 +85,8 @@ impl<'a> Authenticator<'a> for TotpAuthenticator<'a> {
             hashtype = HashType::SHA256;
         }
         TotpAuthenticator {
-            config: config,
-            hashtype: hashtype,
+            config,
+            hashtype,
         }
     }
 
@@ -103,7 +103,7 @@ impl<'a> Authenticator<'a> for TotpAuthenticator<'a> {
                 return None;
             }
             input = input.trim().to_string();
-            if input == "" {
+            if input.is_empty() {
                 // Skip this authenticator
                 return None;
             }
@@ -151,9 +151,9 @@ fn b64_to_bytes(b64: &str) -> Option<Vec<u8>> {
     let mut bits_have: u8 = 0;
     for (i, ch) in no_equal.chars().enumerate() {
         let value_ch = if ch.is_ascii_alphabetic() {
-            (ch as u8) - ('A' as u8) // 'A' becomes 0
+            (ch as u8) - b'A' // 'A' becomes 0
         } else if ch.is_digit(8) && ch != '0' && ch != '1' {
-            (ch as u8) - ('2' as u8) + 26 // '2' becomes 26
+            (ch as u8) - b'2' + 26 // '2' becomes 26
         } else {
             return None;
         };

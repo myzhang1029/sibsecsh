@@ -21,7 +21,7 @@ use std::env;
 /// Parse command line arguments, the first reture value is the aargument to
 /// -c if any, and the second argument is the other arguments
 pub fn parse_args() -> (Option<String>, Vec<String>) {
-    let all_args: Vec<String> = env::args().map(|x| x.to_string()).collect();
+    let all_args: Vec<String> = env::args().collect();
     info!("Program arguments: {:?}", all_args);
     for (i, argument) in env::args().enumerate() {
         if argument == "-c" {
