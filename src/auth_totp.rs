@@ -84,10 +84,7 @@ impl<'a> Authenticator<'a> for TotpAuthenticator<'a> {
         } else if config.totp_hash[strlen - 3..strlen] == *"256" {
             hashtype = HashType::SHA256;
         }
-        TotpAuthenticator {
-            config,
-            hashtype,
-        }
+        TotpAuthenticator { config, hashtype }
     }
 
     fn is_accepted_login(&self) -> Option<bool> {
@@ -157,7 +154,7 @@ fn b64_to_bytes(b64: &str) -> Option<Vec<u8>> {
         } else {
             return None;
         };
-        buf_cur = (buf_cur << 5) + (value_ch as u16);
+        buf_cur = (buf_cur << 5) + u16::from(value_ch);
         bits_have += 5;
         if i == no_equal.len() - 1 {
             // Remove padded zeroes

@@ -36,13 +36,13 @@ pub struct EmailAuthenticator<'a> {
 impl<'a> EmailAuthenticator<'a> {
     fn gen_code() -> u32 {
         let mut rng = rand::thread_rng();
-        rng.gen_range(100000..1000000)
+        rng.gen_range(100_000..1_000_000)
     }
 
     fn read_password(&self) -> Result<String, String> {
         let mut args = self.config.mail_passwdcmd.split_whitespace();
         let cmd = args.next().ok_or("Invalid mail_passwdcmd")?;
-        let cmd_args: Vec<String> = args.map(|arg| arg.to_string()).collect();
+        let cmd_args: Vec<String> = args.map(std::string::ToString::to_string).collect();
 
         Ok(Exec::cmd(cmd)
             .args(&cmd_args)
@@ -90,10 +90,7 @@ impl<'a> EmailAuthenticator<'a> {
 impl<'a> Authenticator<'a> for EmailAuthenticator<'a> {
     fn init(config: &'a Config) -> Self {
         let code = EmailAuthenticator::gen_code();
-        EmailAuthenticator {
-            config,
-            code,
-        }
+        EmailAuthenticator { config, code }
     }
 
     fn is_accepted_login(&self) -> Option<bool> {
@@ -180,7 +177,7 @@ impl<'a> Authenticator<'a> for EmailAuthenticator<'a> {
             // Write the generated code
             match File::create(sib_code_file) {
                 Ok(mut file) => {
-                    file.write(&self.code.to_string().as_bytes()).ok();
+                    file.write(self.code.to_string().as_bytes()).ok();
                 }
                 // This is certainlty unwanted
                 Err(e) => error!("Create code file failed: {}", e),

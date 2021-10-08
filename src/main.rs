@@ -85,7 +85,8 @@ fn print_err_exit(msg: String) -> Result<(), String> {
 }
 
 fn main() {
-    let mut configuration: config::Config = Default::default();
+    const UNKNOWN: &str = "unknown user";
+    let mut configuration = config::Config::default();
     let load_result = configuration.load_all_possible();
     let log_file = match configuration.open_log() {
         Ok(f) => f,
@@ -104,16 +105,14 @@ fn main() {
         panic_gracefully!("Cannot create logger: {:?}", e);
     }
 
-    match load_result {
-        Ok(_) => (),
-        Err(_) => warn!("No configuration supplied!"),
+    if load_result.is_err() {
+        warn!("No configuration supplied!");
     }
-    const UNKNOWN: &str = "unknown user";
     let username = get_current_username()
         .or_else(|| Some(OsString::from(UNKNOWN)))
         .unwrap();
     let username = username.to_str().or(Some(UNKNOWN)).unwrap();
-    info!("Login attempt from {} for {}", ip::get_from_ip(), username);
+    info!("Login attempt from {} for {}", ip::get_from(), username);
     do_check_auth(
         &auth::BypassAuthenticator::init(&configuration),
         &configuration,

@@ -32,7 +32,7 @@ fn read_who_ami() -> Result<String, PopenError> {
 }
 
 /// Get login source IP address
-pub fn get_from_ip() -> String {
+pub fn get_from() -> String {
     // First try to get the ip from $SSH_CONNECTION
     if let Ok(value) = env::var("SSH_CONNECTION") {
         if let Some(ip_address) = value.split_whitespace().next() {

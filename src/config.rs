@@ -16,7 +16,7 @@
 //  You should have received a copy of the GNU Affero General Public License
 //  along with sib secure shell.  If not, see <https://www.gnu.org/licenses/>.
 //
-use crate::ip::get_from_ip;
+use crate::ip::get_from;
 use exec::Command;
 use serde::Deserialize;
 use std::env;
@@ -66,7 +66,7 @@ pub struct Config {
 }
 
 impl Config {
-    /// Parse a configuration file in TOML format ar FILE_PATH
+    /// Parse a configuration file in TOML format at `FILE_PATH`
     pub fn parse_config(&mut self, file_path: &str) -> io::Result<()> {
         let mut file = File::open(file_path)?;
         let mut file_content = String::new();
@@ -122,21 +122,21 @@ impl Config {
         // A warning will be emitted if no configuration is found
         let mut found_any = false;
 
-        for filename in ["/etc/secrc", "/etc/secrc.toml"].iter() {
-            if self.parse_config(&filename).is_ok() {
+        for filename in &["/etc/secrc", "/etc/secrc.toml"] {
+            if self.parse_config(filename).is_ok() {
                 found_any = true;
             }
         }
         if let Some(mut home_dir) = home::home_dir() {
             home_dir.push(".secrc");
             if let Some(path_str) = home_dir.to_str() {
-                if self.parse_config(&path_str).is_ok() {
+                if self.parse_config(path_str).is_ok() {
                     found_any = true;
                 }
             }
             home_dir.set_extension("toml");
             if let Some(path_str) = home_dir.to_str() {
-                if self.parse_config(&path_str).is_ok() {
+                if self.parse_config(path_str).is_ok() {
                     found_any = true;
                 }
             }
@@ -162,10 +162,10 @@ impl Config {
         let mut args: Vec<String> = self
             .shell_args
             .split_whitespace()
-            .map(|x| x.to_string())
+            .map(std::string::ToString::to_string)
             .collect();
         args.append(&mut additional_params);
-        env::set_var("SIB_FROM_IP", get_from_ip());
+        env::set_var("SIB_FROM_IP", get_from());
 
         match search_shells(&self.shell) {
             Ok(found) => {

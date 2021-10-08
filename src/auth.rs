@@ -17,7 +17,7 @@
 //  along with sib secure shell.  If not, see <https://www.gnu.org/licenses/>.
 //
 use crate::config::Config;
-use crate::ip::get_from_ip;
+use crate::ip::get_from;
 use ipaddress::IPAddress;
 
 /// Trait for authenticate providers
@@ -47,11 +47,11 @@ impl<'a> Authenticator<'a> for LocalIPAuthenticator<'a> {
     }
 
     fn is_accepted_login(&self) -> Option<bool> {
-        let checking = match IPAddress::parse(get_from_ip()) {
+        let checking = match IPAddress::parse(get_from()) {
             Ok(ok) => ok,
             Err(_e) => return None,
         };
-        for network in self.config.accepted_ips.iter() {
+        for network in &self.config.accepted_ips {
             let ipaddress = match IPAddress::parse(network) {
                 Ok(ok) => ok,
                 Err(errstr) => {
