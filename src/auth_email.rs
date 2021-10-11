@@ -16,12 +16,14 @@
 //  You should have received a copy of the GNU Affero General Public License
 //  along with sib secure shell.  If not, see <https://www.gnu.org/licenses/>.
 //
+
 use crate::auth::Authenticator;
 use crate::config::Config;
 use crate::extend_lettre::new_simple_port;
 use lettre::smtp::authentication::Credentials;
 use lettre::Transport;
 use lettre_email::EmailBuilder;
+use log::{debug, error, info, warn};
 use rand::Rng;
 use std::fs::{remove_file, File};
 use std::io::{stdin, stdout, Read, Write};

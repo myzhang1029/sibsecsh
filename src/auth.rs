@@ -16,9 +16,11 @@
 //  You should have received a copy of the GNU Affero General Public License
 //  along with sib secure shell.  If not, see <https://www.gnu.org/licenses/>.
 //
+
 use crate::config::Config;
 use crate::ip::get_from;
 use ipaddress::IPAddress;
+use log::warn;
 
 /// Trait for authenticate providers
 pub trait Authenticator<'auth> {

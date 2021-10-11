@@ -16,8 +16,10 @@
 //  You should have received a copy of the GNU Affero General Public License
 //  along with sib secure shell.  If not, see <https://www.gnu.org/licenses/>.
 //
+
 use crate::auth::Authenticator;
 use crate::config::Config;
+use log::{error, info};
 use oath::{totp_raw_custom_time, HashType};
 use std::io::{stdin, stdout, Write};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -167,6 +169,7 @@ fn b64_to_bytes(b64: &str) -> Option<Vec<u8>> {
             // to be type-consistent
             let value: u16 = buf_cur >> bits_have;
             buf_cur -= value << bits_have; // Remove processed bits
+            #[allow(clippy::cast_possible_truncation)]
             result.push(value as u8); // No overflow should occur
         }
     }

@@ -16,6 +16,8 @@
 //  You should have received a copy of the GNU Affero General Public License
 //  along with sib secure shell.  If not, see <https://www.gnu.org/licenses/>.
 //
+
+use log::debug;
 use regex::Regex;
 use std::env;
 use subprocess::{Exec, PopenError, Redirection};

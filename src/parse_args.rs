@@ -16,6 +16,8 @@
 //  You should have received a copy of the GNU Affero General Public License
 //  along with sib secure shell.  If not, see <https://www.gnu.org/licenses/>.
 //
+
+use log::info;
 use std::env;
 
 /// Parse command line arguments, the first reture value is the aargument to

@@ -19,20 +19,6 @@
 //  along with sib secure shell.  If not, see <https://www.gnu.org/licenses/>.
 //
 
-extern crate home;
-extern crate ipaddress;
-extern crate lettre;
-extern crate lettre_email;
-#[macro_use]
-extern crate log;
-extern crate rand;
-extern crate regex;
-extern crate serde;
-extern crate simplelog;
-extern crate subprocess;
-extern crate toml;
-extern crate users;
-
 mod auth;
 mod auth_email;
 mod auth_totp;
@@ -44,6 +30,7 @@ mod ip;
 mod parse_args;
 
 use crate::auth::Authenticator;
+use log::{info, warn};
 use simplelog::{
     CombinedLogger, ConfigBuilder, LevelFilter, TermLogger, TerminalMode, WriteLogger,
 };
@@ -80,6 +67,7 @@ fn do_check_auth<'a>(
     }
 }
 
+#[allow(clippy::needless_pass_by_value)]
 fn print_err_exit(msg: String) -> Result<(), String> {
     panic_gracefully!("Sorry: {}", msg);
 }
