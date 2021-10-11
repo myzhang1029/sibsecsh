@@ -23,8 +23,6 @@ mod auth;
 mod auth_email;
 mod auth_totp;
 mod config;
-#[macro_use]
-mod error;
 mod extend_lettre;
 mod ip;
 mod parse_args;
@@ -69,16 +67,34 @@ fn do_check_auth<'a>(
 
 #[allow(clippy::needless_pass_by_value)]
 fn print_err_exit(msg: String) -> Result<(), String> {
-    panic_gracefully!("Sorry: {}", msg);
+    panic!("Sorry: {}", msg);
 }
 
 fn main() {
     const UNKNOWN: &str = "unknown user";
+
+    // Wait for user input before panic!king.
+    std::panic::set_hook(Box::new(|panic_info| {
+        if let Some(location) = panic_info.location() {
+            eprint!("Panic occurred at {}:{}", location.file(), location.line());
+        } else {
+            eprint!("Panic occurred");
+        }
+        if let Some(msg) = panic_info.payload().downcast_ref::<&str>() {
+            eprintln!(": {}", msg);
+        } else if let Some(msg) = panic_info.payload().downcast_ref::<String>() {
+            eprintln!(": {}", msg);
+        } else {
+            eprintln!();
+        }
+        std::io::stdin().read_line(&mut String::new()).unwrap();
+    }));
+
     let mut configuration = config::Config::default();
     let load_result = configuration.load_all_possible();
     let log_file = match configuration.open_log() {
         Ok(f) => f,
-        Err(e) => panic_gracefully!("Cannot open log file: {:?}", e),
+        Err(e) => panic!("Cannot open log file: {}", e),
     };
     let log_format = ConfigBuilder::new()
         .set_time_to_local(true)
@@ -90,7 +106,7 @@ fn main() {
         TermLogger::new(LevelFilter::Error, log_format.clone(), TerminalMode::Mixed),
         WriteLogger::new(LevelFilter::Info, log_format, log_file),
     ]) {
-        panic_gracefully!("Cannot create logger: {:?}", e);
+        panic!("Cannot create logger: {}", e);
     }
 
     if load_result.is_err() {
@@ -125,5 +141,5 @@ fn main() {
     )
     .or_else(print_err_exit)
     .ok();
-    panic_gracefully!("Sorry: All authenticators skipped");
+    panic!("Sorry: All authenticators skipped");
 }
