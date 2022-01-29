@@ -30,7 +30,7 @@ mod parse_args;
 use crate::auth::Authenticator;
 use log::{info, warn};
 use simplelog::{
-    CombinedLogger, ConfigBuilder, LevelFilter, TermLogger, TerminalMode, WriteLogger,
+    ColorChoice, CombinedLogger, ConfigBuilder, LevelFilter, TermLogger, TerminalMode, WriteLogger,
 };
 use std::ffi::OsString;
 use users::get_current_username;
@@ -103,7 +103,12 @@ fn main() {
         .build();
 
     if let Err(e) = CombinedLogger::init(vec![
-        TermLogger::new(LevelFilter::Error, log_format.clone(), TerminalMode::Mixed),
+        TermLogger::new(
+            LevelFilter::Error,
+            log_format.clone(),
+            TerminalMode::Mixed,
+            ColorChoice::Auto,
+        ),
         WriteLogger::new(LevelFilter::Info, log_format, log_file),
     ]) {
         panic!("Cannot create logger: {}", e);
