@@ -19,8 +19,9 @@
 
 use crate::config::Config;
 use crate::ip::get_from;
-use ipaddress::IPAddress;
+use cidr::IpCidr;
 use log::warn;
+use std::net::IpAddr;
 
 /// Trait for authenticate providers
 pub trait Authenticator<'auth> {
@@ -49,19 +50,19 @@ impl<'a> Authenticator<'a> for LocalIPAuthenticator<'a> {
     }
 
     fn is_accepted_login(&self) -> Option<bool> {
-        let checking = match IPAddress::parse(get_from()) {
+        let checking: IpAddr = match get_from().parse() {
             Ok(ok) => ok,
             Err(_e) => return None,
         };
         for network in &self.config.accepted_ips {
-            let ipaddress = match IPAddress::parse(network) {
+            let cidr: IpCidr = match network.parse() {
                 Ok(ok) => ok,
                 Err(errstr) => {
-                    warn!("Bad ip address pattern {:?}", errstr);
+                    warn!("Bad CIDR: {:?}", errstr);
                     continue;
                 }
             };
-            if ipaddress.includes(&checking) {
+            if cidr.contains(&checking) {
                 warn!("Local login accepted");
                 return Some(true);
             }
