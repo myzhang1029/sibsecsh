@@ -120,7 +120,7 @@ fn main() {
     let username = get_current_username()
         .or_else(|| Some(OsString::from(UNKNOWN)))
         .unwrap();
-    let username = username.to_str().or(Some(UNKNOWN)).unwrap();
+    let username = username.to_str().unwrap_or(UNKNOWN);
     info!("Login attempt from {} for {}", ip::get_from(), username);
     do_check_auth(
         &auth::BypassAuthenticator::init(&configuration),
