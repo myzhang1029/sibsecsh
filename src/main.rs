@@ -19,6 +19,20 @@
 //  along with sib secure shell.  If not, see <https://www.gnu.org/licenses/>.
 //
 
+#![forbid(unsafe_code)]
+#![warn(
+    clippy::pedantic,
+    missing_docs,
+    missing_debug_implementations,
+    missing_copy_implementations,
+    trivial_casts,
+    trivial_numeric_casts,
+    unused_extern_crates,
+    unused_import_braces,
+    unused_qualifications,
+    variant_size_differences
+)]
+
 mod auth;
 mod auth_email;
 mod auth_totp;
@@ -36,7 +50,7 @@ use std::ffi::OsString;
 use users::get_current_username;
 
 fn do_check_auth<'a>(
-    authenticator: &impl auth::Authenticator<'a>,
+    authenticator: &impl Authenticator<'a>,
     configuration: &config::Config,
 ) -> Result<(), String> {
     // First see whether -c is supplied
