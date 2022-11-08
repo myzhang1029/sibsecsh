@@ -111,8 +111,11 @@ fn main() {
         Err(e) => panic!("Cannot open log file: {}", e),
     };
     let log_format = ConfigBuilder::new()
-        .set_time_to_local(true)
-        .set_time_format_str("[%Y-%m-%d %H:%M:%S]")
+        .set_time_offset_to_local()
+        // Just use UTC if simplelog can't determine the offset
+        .or_else::<&mut ConfigBuilder, _>(Ok)
+        .unwrap()
+        .set_time_format_rfc3339()
         .set_target_level(LevelFilter::Error)
         .build();
 
