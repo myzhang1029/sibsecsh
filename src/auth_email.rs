@@ -18,7 +18,7 @@
 //
 
 use crate::auth::Authenticator;
-use crate::config::Config;
+use crate::config::SecRcCfg;
 use crate::extend_lettre::new_simple_port;
 use lettre::smtp::authentication::Credentials;
 use lettre::Transport;
@@ -31,7 +31,8 @@ use std::path::PathBuf;
 use subprocess::{Exec, Redirection};
 
 pub struct EmailAuthenticator<'a> {
-    config: &'a Config,
+    config: &'a SecRcCfg,
+    enabled: bool,
     code: u32,
 }
 
@@ -42,24 +43,47 @@ impl<'a> EmailAuthenticator<'a> {
     }
 
     fn read_password(&self) -> Result<String, String> {
-        let mut args = self.config.mail_passwdcmd.split_whitespace();
-        let cmd = args.next().ok_or("Invalid mail_passwdcmd")?;
-        let cmd_args: Vec<String> = args.map(std::string::ToString::to_string).collect();
+        if let Some(passwdcmd) = &self.config.mail_passwdcmd {
+            let mut args = passwdcmd.split_whitespace();
+            let cmd = args.next().ok_or("Invalid mail_passwdcmd")?;
+            let cmd_args: Vec<String> = args.map(std::string::ToString::to_string).collect();
 
-        Ok(Exec::cmd(cmd)
-            .args(&cmd_args)
-            .stdout(Redirection::Pipe)
-            .capture()
-            .map_err(|e| format!("Cannot run mail_passwdcmd: {:?}", e))?
-            .stdout_str()
-            .trim()
-            .to_string())
+            Ok(Exec::cmd(cmd)
+                .args(&cmd_args)
+                .stdout(Redirection::Pipe)
+                .capture()
+                .map_err(|e| format!("Cannot run mail_passwdcmd: {:?}", e))?
+                .stdout_str()
+                .trim()
+                .to_string())
+        } else {
+            Ok(String::new())
+        }
     }
 
     fn send_email(&self, moreinfo: &str) -> Result<(), String> {
+        let mail_from = self
+            .config
+            .mail_from
+            .as_ref()
+            .expect("Bug: `config.mail_from` should not be `None` here");
+        let mail_port = self
+            .config
+            .mail_port
+            .expect("Bug: `config.mail_port` should not be `None` here");
+        let mail_host = self
+            .config
+            .mail_host
+            .as_ref()
+            .expect("Bug: `config.mail_host` should not be `None` here");
         let email = match EmailBuilder::new()
-            .to(self.config.email.clone())
-            .from((&self.config.mail_from, "SIB Secure Shell"))
+            .to(self
+                .config
+                .email
+                .as_ref()
+                .expect("Bug: `config.email` should not be `None` here")
+                .clone())
+            .from((mail_from, "SIB Secure Shell"))
             .subject("Login Code")
             .text(format!("Your code is {}{}.", self.code, moreinfo))
             .build()
@@ -69,11 +93,11 @@ impl<'a> EmailAuthenticator<'a> {
         };
 
         let password = self.read_password()?;
-        let cred = Credentials::new(self.config.mail_from.clone(), password);
+        let cred = Credentials::new(mail_from.clone(), password);
 
         info!("Sending email to {:?}", self.config.email);
 
-        let mut mailer = new_simple_port(&self.config.mail_host, self.config.mail_port)
+        let mut mailer = new_simple_port(mail_host, mail_port)
             .unwrap()
             .credentials(cred)
             .transport();
@@ -90,14 +114,41 @@ impl<'a> EmailAuthenticator<'a> {
 }
 
 impl<'a> Authenticator<'a> for EmailAuthenticator<'a> {
-    fn init(config: &'a Config) -> Self {
+    fn init(config: &'a SecRcCfg) -> Self {
         let code = EmailAuthenticator::gen_code();
-        EmailAuthenticator { config, code }
+        let enabled = if config.email.is_some() {
+            if config.mail_host.is_none() {
+                error!("Email authenticator enabled but mail_host is None");
+                false
+            } else if config.mail_port.is_none() {
+                error!("Email authenticator enabled but mail_port is None");
+                false
+            } else if config.mail_from.is_none() {
+                error!("Email authenticator enabled but mail_from is None");
+                false
+            } else {
+                true
+            }
+        } else {
+            false
+        };
+        EmailAuthenticator {
+            config,
+            enabled,
+            code,
+        }
     }
 
     fn is_accepted_login(&self) -> Option<bool> {
+        if !self.enabled {
+            return None;
+        }
         // Make a shadowed email
-        let email = &self.config.email;
+        let email = self
+            .config
+            .email
+            .as_ref()
+            .expect("Bug: `config.email` should not be `None` here");
         let namelen = email.rfind('@')?;
         let shadowed = email[namelen / 2..namelen].to_string();
         let mut shadowemail = email[0..namelen / 2].to_string();
@@ -121,7 +172,7 @@ impl<'a> Authenticator<'a> for EmailAuthenticator<'a> {
                 // Skip this authenticator
                 return None;
             }
-            if input == shadowed || input == *email {
+            if input == shadowed || input == **email {
                 tries = 0;
                 break;
             }
@@ -169,15 +220,22 @@ impl<'a> Authenticator<'a> for EmailAuthenticator<'a> {
     }
 
     fn is_accepted_exec(&self, cmd: &mut String) -> Option<bool> {
-        let mut sib_code_file = PathBuf::from(&self.config.tmpdir);
+        let mut sib_code_file = PathBuf::from(
+            &self
+                .config
+                .tmpdir
+                .as_ref()
+                .expect("Bug: `config.tmpdir` should never be `None`"),
+        );
         sib_code_file.push("sib_code");
-        if *cmd == self.config.email {
+        // Simply return None for "cancel" if no email supplied
+        if cmd == self.config.email.as_ref()? {
             // Send auth code
             if let Err(error) = self.send_email("") {
                 error!("{}", error);
             }
             // Write the generated code
-            match File::create(sib_code_file) {
+            match File::create(dbg!(sib_code_file)) {
                 Ok(mut file) => {
                     file.write(self.code.to_string().as_bytes()).ok();
                 }

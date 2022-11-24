@@ -18,14 +18,15 @@
 //
 
 use crate::auth::Authenticator;
-use crate::config::Config;
+use crate::config::SecRcCfg;
 use log::{error, info};
 use oath::{totp_raw_custom_time, HashType};
 use std::io::{stdin, stdout, Write};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub struct TotpAuthenticator<'a> {
-    config: &'a Config,
+    config: &'a SecRcCfg,
+    enabled: bool,
     hashtype: HashType,
 }
 
@@ -42,31 +43,38 @@ impl<'a> TotpAuthenticator<'a> {
             }
         };
         // Error would have been logged
-        let secret = b64_to_bytes(&self.config.totp_secret)?;
+        let secret = b64_to_bytes(
+            self.config
+                .totp_secret
+                .as_ref()
+                .expect("Bug: `config.totp_secret` should not be `None` here"),
+        )?;
+        let totp_digits = self
+            .config
+            .totp_digits
+            .expect("Bug: `config.totp_digit` should not be `None` here");
+        let totp_timestep = self
+            .config
+            .totp_timestep
+            .expect("Bug: `config.totp_timestep` should not be `None` here");
         // code_1 is the most likely
-        let code_1 = totp_raw_custom_time(
-            &secret,
-            self.config.totp_digits,
-            0,
-            self.config.totp_timestep,
-            now,
-            &self.hashtype,
-        );
+        let code_1 =
+            totp_raw_custom_time(&secret, totp_digits, 0, totp_timestep, now, &self.hashtype);
         // code_2 is also likely
         let code_2 = totp_raw_custom_time(
             &secret,
-            self.config.totp_digits,
+            totp_digits,
             0,
-            self.config.totp_timestep,
+            totp_timestep,
             now - 30,
             &self.hashtype,
         );
         // code_3 is not so likely
         let code_3 = totp_raw_custom_time(
             &secret,
-            self.config.totp_digits,
+            totp_digits,
             0,
-            self.config.totp_timestep,
+            totp_timestep,
             now + 30,
             &self.hashtype,
         );
@@ -75,57 +83,80 @@ impl<'a> TotpAuthenticator<'a> {
 }
 
 impl<'a> Authenticator<'a> for TotpAuthenticator<'a> {
-    fn init(config: &'a Config) -> Self {
+    fn init(config: &'a SecRcCfg) -> Self {
         let mut hashtype = HashType::SHA1;
-        let strlen = config.totp_hash.len();
+        if let Some(config_hash_type) = &config.totp_hash {
+            let strlen = config_hash_type.len();
 
-        if config.totp_hash[0..3].to_uppercase() != "SHA" {
-            error!("Invalid totp_hash type");
-        } else if config.totp_hash[strlen - 3..strlen] == *"512" {
-            hashtype = HashType::SHA512;
-        } else if config.totp_hash[strlen - 3..strlen] == *"256" {
-            hashtype = HashType::SHA256;
+            if config_hash_type[0..3].to_uppercase() != "SHA" {
+                error!("Invalid totp_hash type");
+            } else if config_hash_type[strlen - 3..strlen] == *"512" {
+                hashtype = HashType::SHA512;
+            } else if config_hash_type[strlen - 3..strlen] == *"256" {
+                hashtype = HashType::SHA256;
+            }
         }
-        TotpAuthenticator { config, hashtype }
+        let enabled = config.totp_secret.is_some();
+        TotpAuthenticator {
+            config,
+            enabled,
+            hashtype,
+        }
     }
 
     fn is_accepted_login(&self) -> Option<bool> {
-        let stdin = stdin();
-        let mut tries: u8 = 0;
-        while tries < 3 {
-            let mut input = String::new();
-            tries += 1;
-            print!("Enter the code displayed on your device: ");
-            stdout().flush().ok();
-            if let Err(error) = stdin.read_line(&mut input) {
-                error!("{}", error);
-                return None;
-            }
-            input = input.trim().to_string();
-            if input.is_empty() {
-                // Skip this authenticator
-                return None;
-            }
-            if let Ok(input) = input.parse() {
-                if self.compare_code(input)? {
-                    return Some(true);
+        if self.enabled {
+            let stdin = stdin();
+            let mut tries: u8 = 0;
+            while tries < 3 {
+                let mut input = String::new();
+                tries += 1;
+                print!("Enter the code displayed on your device: ");
+                stdout().flush().ok();
+                if let Err(error) = stdin.read_line(&mut input) {
+                    error!("{}", error);
+                    return None;
                 }
+                input = input.trim().to_string();
+                if input.is_empty() {
+                    // Skip this authenticator
+                    return None;
+                }
+                if let Ok(input) = input.parse() {
+                    if self.compare_code(input)? {
+                        return Some(true);
+                    }
+                }
+                info!("Got wrong code {:?}", input);
+                eprintln!("Not match");
             }
-            info!("Got wrong code {:?}", input);
-            eprintln!("Not match");
+            // Maximum number of tries exceeded
+            error!("Maximum number of retries exceeded");
+            Some(false)
+        } else {
+            None
         }
-        // Maximum number of tries exceeded
-        error!("Maximum number of retries exceeded");
-        Some(false)
     }
 
     fn is_accepted_exec(&self, cmd: &mut String) -> Option<bool> {
-        // A missing code becomes None
-        let input: u64 = cmd[0..(self.config.totp_digits as usize)].parse().ok()?;
-        if self.compare_code(input)? {
-            // Remove the code
-            *cmd = cmd[(self.config.totp_digits as usize)..cmd.len()].to_string();
-            Some(true)
+        if self.enabled {
+            let totp_digits = self
+                .config
+                .totp_digits
+                .expect("Bug: `config.totp_digit` should not be `None` here")
+                as usize;
+            if cmd.len() < totp_digits {
+                return None;
+            }
+            // A missing code becomes None
+            let input: u64 = cmd[0..totp_digits].parse().ok()?;
+            if self.compare_code(input)? {
+                // Remove the code
+                *cmd = cmd[totp_digits..cmd.len()].to_string();
+                Some(true)
+            } else {
+                None
+            }
         } else {
             None
         }

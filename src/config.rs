@@ -29,116 +29,106 @@ use std::io::prelude::*;
 use std::io::{Error, ErrorKind};
 
 /// Type for deserializing a secrc.toml
+/// Representing a sib secure shell configuration
+/// Authenticator parameters are public
 #[derive(Deserialize, Debug)]
-struct SecRc {
-    accepted_ips: Option<Vec<String>>,
-    email: Option<String>,
+pub struct SecRcCfg {
+    pub accepted_ips: Option<Vec<String>>,
+    pub email: Option<String>,
     shell: Option<String>,
     shell_args: Option<String>,
     log_file: Option<String>,
-    tmpdir: Option<String>,
-    mail_host: Option<String>,
-    mail_port: Option<u16>,
-    mail_from: Option<String>,
-    mail_passwdcmd: Option<String>,
-    totp_secret: Option<String>,
-    totp_digits: Option<u32>,
-    totp_timestep: Option<u64>,
-    totp_hash: Option<String>,
+    pub tmpdir: Option<String>,
+    pub mail_host: Option<String>,
+    pub mail_port: Option<u16>,
+    pub mail_from: Option<String>,
+    pub mail_passwdcmd: Option<String>,
+    pub totp_secret: Option<String>,
+    pub totp_digits: Option<u32>,
+    pub totp_timestep: Option<u64>,
+    pub totp_hash: Option<String>,
 }
 
-/// Representing a sib secure shell configuration
-/// Authenticator parameters are public
-#[derive(Debug)]
-pub struct Config {
-    pub accepted_ips: Vec<String>,
-    pub email: String,
-    shell: String,
-    shell_args: String,
-    log_file: String,
-    pub tmpdir: String,
-    pub mail_host: String,
-    pub mail_port: u16,
-    pub mail_from: String,
-    pub mail_passwdcmd: String,
-    pub totp_secret: String,
-    pub totp_digits: u32,
-    pub totp_timestep: u64,
-    pub totp_hash: String,
-}
-
-impl Config {
-    /// Parse a configuration file in TOML format at `FILE_PATH`
-    pub fn parse_config(&mut self, file_path: &str) -> io::Result<()> {
+impl SecRcCfg {
+    /// Parse and load a configuration file in TOML format at `FILE_PATH`
+    pub fn load_config(&mut self, file_path: &str) -> io::Result<()> {
         let mut file = File::open(file_path)?;
         let mut file_content = String::new();
         file.read_to_string(&mut file_content)?;
-        let toml_content: SecRc = toml::from_str(&file_content)?;
-        if let Some(accepted_ips) = toml_content.accepted_ips {
-            self.accepted_ips = accepted_ips;
+        let mut toml_content: SecRcCfg = toml::from_str(&file_content)?;
+        // Override the current value if the incoming one is not `None`
+        if let Some(incoming_accepted_ips) = &mut toml_content.accepted_ips {
+            if self.accepted_ips.is_some() {
+                self.accepted_ips
+                    .as_mut()
+                    .unwrap()
+                    .append(incoming_accepted_ips);
+            } else {
+                self.accepted_ips = toml_content.accepted_ips;
+            }
         }
-        if let Some(email) = toml_content.email {
-            self.email = email;
+        if toml_content.email.is_some() {
+            self.email = toml_content.email;
         }
-        if let Some(shell) = toml_content.shell {
-            self.shell = shell;
+        if toml_content.shell.is_some() {
+            self.shell = toml_content.shell;
         }
-        if let Some(shell_args) = toml_content.shell_args {
-            self.shell_args = shell_args;
+        if toml_content.shell_args.is_some() {
+            self.shell_args = toml_content.shell_args;
         }
-        if let Some(log_file) = toml_content.log_file {
-            self.log_file = log_file;
+        if toml_content.log_file.is_some() {
+            self.log_file = toml_content.log_file;
         }
-        if let Some(tmpdir) = toml_content.tmpdir {
-            self.tmpdir = tmpdir;
+        if toml_content.tmpdir.is_some() {
+            self.tmpdir = toml_content.tmpdir;
         }
-        if let Some(mail_host) = toml_content.mail_host {
-            self.mail_host = mail_host;
+        if toml_content.mail_host.is_some() {
+            self.mail_host = toml_content.mail_host;
         }
-        if let Some(mail_port) = toml_content.mail_port {
-            self.mail_port = mail_port;
+        if toml_content.mail_port.is_some() {
+            self.mail_port = toml_content.mail_port;
         }
-        if let Some(mail_from) = toml_content.mail_from {
-            self.mail_from = mail_from;
+        if toml_content.mail_from.is_some() {
+            self.mail_from = toml_content.mail_from;
         }
-        if let Some(mail_passwdcmd) = toml_content.mail_passwdcmd {
-            self.mail_passwdcmd = mail_passwdcmd;
+        if toml_content.mail_passwdcmd.is_some() {
+            self.mail_passwdcmd = toml_content.mail_passwdcmd;
         }
-        if let Some(totp_secret) = toml_content.totp_secret {
-            self.totp_secret = totp_secret;
+        if toml_content.totp_secret.is_some() {
+            self.totp_secret = toml_content.totp_secret;
         }
-        if let Some(totp_digits) = toml_content.totp_digits {
-            self.totp_digits = totp_digits;
+        if toml_content.totp_digits.is_some() {
+            self.totp_digits = toml_content.totp_digits;
         }
-        if let Some(totp_timestep) = toml_content.totp_timestep {
-            self.totp_timestep = totp_timestep;
+        if toml_content.totp_timestep.is_some() {
+            self.totp_timestep = toml_content.totp_timestep;
         }
-        if let Some(totp_hash) = toml_content.totp_hash {
-            self.totp_hash = totp_hash;
+        if toml_content.totp_hash.is_some() {
+            self.totp_hash = toml_content.totp_hash;
         }
         Ok(())
     }
 
-    /// Load configuration from all designated locations, latter overriding the former
+    /// Load configuration from all designated locations, latter overriding former ones
     pub fn load_all_possible(&mut self) -> io::Result<()> {
         // A warning will be emitted if no configuration is found
         let mut found_any = false;
 
         for filename in &["/etc/secrc", "/etc/secrc.toml"] {
-            if self.parse_config(filename).is_ok() {
+            if self.load_config(filename).is_ok() {
                 found_any = true;
             }
         }
         if let Some(mut home_dir) = home::home_dir() {
             home_dir.push(".secrc");
             if let Some(path_str) = home_dir.to_str() {
-                if self.parse_config(path_str).is_ok() {
+                if self.load_config(path_str).is_ok() {
                     found_any = true;
                 }
             }
             home_dir.set_extension("toml");
             if let Some(path_str) = home_dir.to_str() {
-                if self.parse_config(path_str).is_ok() {
+                if self.load_config(path_str).is_ok() {
                     found_any = true;
                 }
             }
@@ -156,20 +146,29 @@ impl Config {
         logfile_open_options
             .create(true)
             .append(true)
-            .open(&self.log_file)
+            .open(&self.log_file.as_ref().ok_or_else(|| {
+                Error::new(ErrorKind::Other, "`SecRcCfg.log_file` should not be `None`")
+            })?)
     }
 
     /// Execute the configured shell, replacing the current process
     pub fn execute_shell(&self, mut additional_params: Vec<String>) -> Result<(), String> {
         let mut args: Vec<String> = self
             .shell_args
+            .as_ref()
+            // self.shell_args must not be None as guaranteed by Default-initialization
+            .expect("Bug: `SecRcCfg.shell_args` should never be `None`")
             .split_whitespace()
             .map(std::string::ToString::to_string)
             .collect();
         args.append(&mut additional_params);
         env::set_var("SIB_FROM_IP", get_from());
+        let shell = self
+            .shell
+            .as_ref()
+            .ok_or("`SecRcCfg.shell` should not be `None`")?;
 
-        match search_shells(&self.shell) {
+        match search_shells(shell) {
             Ok(found) => {
                 if !found {
                     return Err("non-standard shell".to_string());
@@ -181,12 +180,12 @@ impl Config {
         };
         Err(format!(
             "Cannot execute shell{:?}",
-            Command::new(self.shell.clone()).args(&args).exec()
+            Command::new(shell.clone()).args(&args).exec()
         ))
     }
 }
 
-impl Default for Config {
+impl Default for SecRcCfg {
     fn default() -> Self {
         // This is a fallback since it may not be safe, other users can read it
         // The best practice is to set it in the configuration
@@ -198,21 +197,25 @@ impl Default for Config {
             }
         }
 
-        Config {
-            accepted_ips: vec![String::from("192.168.1.0/24")],
-            email: String::from("target@example.com"),
-            shell: String::from("/bin/zsh"),
-            shell_args: String::from("--login"),
-            log_file: String::from("/var/log/sibsecsh.log"),
-            tmpdir,
-            mail_host: String::from("smtp.example.com"),
-            mail_port: 587,
-            mail_from: String::from("from@example.com"),
-            mail_passwdcmd: String::from("echo 123456"),
-            totp_secret: String::from("-"), // Non-base32 string disables this authenticator
-            totp_digits: 6,
-            totp_timestep: 30,
-            totp_hash: String::from("SHA1"),
+        SecRcCfg {
+            accepted_ips: Some(vec![]),
+            shell: None,
+            /// Default to have no args
+            shell_args: Some(String::default()),
+            log_file: Some(String::from("/var/log/sibsecsh.log")),
+            tmpdir: Some(tmpdir),
+            /// None disables this authenticator
+            /// Not prefixed by `mail_` for compatibility reason
+            email: None,
+            mail_host: None,
+            mail_port: Some(587),
+            mail_from: None,
+            mail_passwdcmd: None,
+            /// None disables this authenticator
+            totp_secret: None,
+            totp_digits: Some(6),
+            totp_timestep: Some(30),
+            totp_hash: Some(String::from("SHA1")),
         }
     }
 }

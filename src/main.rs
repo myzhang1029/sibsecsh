@@ -51,7 +51,7 @@ use users::get_current_username;
 
 fn do_check_auth<'a>(
     authenticator: &impl Authenticator<'a>,
-    configuration: &config::Config,
+    configuration: &config::SecRcCfg,
 ) -> Result<(), String> {
     // First see whether -c is supplied
     let options = parse_args::parse_args();
@@ -104,7 +104,7 @@ fn main() {
         std::io::stdin().read_line(&mut String::new()).unwrap();
     }));
 
-    let mut configuration = config::Config::default();
+    let mut configuration = config::SecRcCfg::default();
     let load_result = configuration.load_all_possible();
     let log_file = match configuration.open_log() {
         Ok(f) => f,

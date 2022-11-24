@@ -17,7 +17,7 @@
 //  along with sib secure shell.  If not, see <https://www.gnu.org/licenses/>.
 //
 
-use crate::config::Config;
+use crate::config::SecRcCfg;
 use crate::ip::get_from;
 use cidr::IpCidr;
 use log::warn;
@@ -26,7 +26,7 @@ use std::net::IpAddr;
 /// Trait for authenticate providers
 pub trait Authenticator<'auth> {
     /// Initialize authenticator from shell configuration
-    fn init(config: &'auth Config) -> Self;
+    fn init(config: &'auth SecRcCfg) -> Self;
     /// Check if the login is accepted by this authenticator
     /// Some(true) is yes
     /// Some(false) is rejected
@@ -41,11 +41,11 @@ pub trait Authenticator<'auth> {
 }
 
 pub struct LocalIPAuthenticator<'a> {
-    config: &'a Config,
+    config: &'a SecRcCfg,
 }
 
 impl<'a> Authenticator<'a> for LocalIPAuthenticator<'a> {
-    fn init(config: &'a Config) -> Self {
+    fn init(config: &'a SecRcCfg) -> Self {
         LocalIPAuthenticator { config }
     }
 
@@ -54,17 +54,20 @@ impl<'a> Authenticator<'a> for LocalIPAuthenticator<'a> {
             Ok(ok) => ok,
             Err(_e) => return None,
         };
-        for network in &self.config.accepted_ips {
-            let cidr: IpCidr = match network.parse() {
-                Ok(ok) => ok,
-                Err(errstr) => {
-                    warn!("Bad CIDR: {:?}", errstr);
-                    continue;
+        // Cancel this authenticator if None
+        if let Some(accepted_ips) = &self.config.accepted_ips {
+            for network in accepted_ips {
+                let cidr: IpCidr = match network.parse() {
+                    Ok(ok) => ok,
+                    Err(errstr) => {
+                        warn!("Bad CIDR: {:?}", errstr);
+                        continue;
+                    }
+                };
+                if cidr.contains(&checking) {
+                    warn!("Local login accepted");
+                    return Some(true);
                 }
-            };
-            if cidr.contains(&checking) {
-                warn!("Local login accepted");
-                return Some(true);
             }
         }
         None
@@ -78,7 +81,7 @@ impl<'a> Authenticator<'a> for LocalIPAuthenticator<'a> {
 pub struct BypassAuthenticator {}
 
 impl Authenticator<'_> for BypassAuthenticator {
-    fn init(_config: &Config) -> Self {
+    fn init(_config: &SecRcCfg) -> Self {
         BypassAuthenticator {}
     }
 
