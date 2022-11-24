@@ -47,6 +47,7 @@ pub struct SecRcCfg {
     pub totp_digits: Option<u32>,
     pub totp_timestep: Option<u64>,
     pub totp_hash: Option<String>,
+    pub yubico_id: Option<String>,
 }
 
 impl SecRcCfg {
@@ -105,6 +106,9 @@ impl SecRcCfg {
         }
         if toml_content.totp_hash.is_some() {
             self.totp_hash = toml_content.totp_hash;
+        }
+        if toml_content.yubico_id.is_some() {
+            self.yubico_id = toml_content.yubico_id;
         }
         Ok(())
     }
@@ -216,6 +220,9 @@ impl Default for SecRcCfg {
             totp_digits: Some(6),
             totp_timestep: Some(30),
             totp_hash: Some(String::from("SHA1")),
+            /// None disables this authenticator
+            /// Only the first 12 characters matter
+            yubico_id: None,
         }
     }
 }

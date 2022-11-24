@@ -36,6 +36,7 @@
 mod auth;
 mod auth_email;
 mod auth_totp;
+mod auth_yubico;
 mod config;
 mod extend_lettre;
 mod ip;
@@ -159,6 +160,12 @@ fn main() {
     .ok();
     do_check_auth(
         &auth_totp::TotpAuthenticator::init(&configuration),
+        &configuration,
+    )
+    .or_else(print_err_exit)
+    .ok();
+    do_check_auth(
+        &auth_yubico::YubicoAuthenticator::init(&configuration),
         &configuration,
     )
     .or_else(print_err_exit)

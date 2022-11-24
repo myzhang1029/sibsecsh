@@ -206,7 +206,6 @@ impl<'a> Authenticator<'a> for EmailAuthenticator<'a> {
                     return None;
                 }
             } else if Ok(self.code) == input {
-                println!("Logged in!");
                 return Some(true);
             } else {
                 // Not 0 nor matched
@@ -235,7 +234,7 @@ impl<'a> Authenticator<'a> for EmailAuthenticator<'a> {
                 error!("{}", error);
             }
             // Write the generated code
-            match File::create(dbg!(sib_code_file)) {
+            match File::create(sib_code_file) {
                 Ok(mut file) => {
                     file.write(self.code.to_string().as_bytes()).ok();
                 }
