@@ -24,89 +24,84 @@ use rand::{distributions::Alphanumeric, Rng};
 use std::collections::BTreeMap;
 use std::io::{stdin, stdout, Write};
 
-pub struct YubicoAuthenticator<'a> {
-    config: &'a SecRcCfg,
+pub struct YubicoAuthenticator {
     // Also serves as `enabled`
     yubico_id: Option<String>,
 }
 
-const YUBICO_SERVER: &'static str = "https://api.yubico.com/wsapi/2.0/verify";
+const YUBICO_SERVER: &str = "https://api.yubico.com/wsapi/2.0/verify";
 
-impl<'a> YubicoAuthenticator<'a> {
-    fn verify_otp(&self, otp: &str) -> Result<bool, String> {
-        let mut rng = rand::thread_rng();
-        // Numeric id
-        let id: i32 = rng.gen_range(0..1_000);
-        // Random nonce
-        let nonce_len = rng.gen_range(16..41);
-        let nonce: String = rng
-            .sample_iter(&Alphanumeric)
-            .take(nonce_len)
-            .map(char::from)
-            .collect();
-        let mut last_error = String::new();
-        for _ in 0..3 {
-            // TODO: signing
-            let resp = ureq::get(YUBICO_SERVER)
-                .query("id", &id.to_string())
-                .query("nonce", &nonce)
-                .query("otp", otp)
-                .call();
-            if let Ok(resp) = resp {
-                // Successful response. Let's verify
-                let result = resp.into_string().map_err(|e| e.to_string())?;
-                let mut kvs: BTreeMap<String, String> = BTreeMap::new();
-                for line in result.split("\r\n") {
-                    if line.len() == 0 {
-                        continue;
-                    }
-                    let (key, value) = line.split_once("=").ok_or_else(|| {
-                        format!("Malformed reply {:?}: missing key or value", line)
-                    })?;
-                    kvs.insert(key.to_string(), value.to_string());
+fn verify_otp(otp: &str) -> Result<bool, String> {
+    let mut rng = rand::thread_rng();
+    // Numeric id
+    let id: i32 = rng.gen_range(0..1_000);
+    // Random nonce
+    let nonce_len = rng.gen_range(16..41);
+    let nonce: String = rng
+        .sample_iter(&Alphanumeric)
+        .take(nonce_len)
+        .map(char::from)
+        .collect();
+    let mut last_error = String::new();
+    for _ in 0..3 {
+        // TODO: signing
+        let resp = ureq::get(YUBICO_SERVER)
+            .query("id", &id.to_string())
+            .query("nonce", &nonce)
+            .query("otp", otp)
+            .call();
+        if let Ok(resp) = resp {
+            // Successful response. Let's verify
+            let result = resp.into_string().map_err(|e| e.to_string())?;
+            let mut kvs: BTreeMap<String, String> = BTreeMap::new();
+            for line in result.split("\r\n") {
+                if line.is_empty() {
+                    continue;
                 }
-                if let Some(returned_otp) = kvs.get("otp") {
-                    if returned_otp != otp {
-                        error!("OTP in the response does not match the request");
-                        // Reject
-                        return Ok(false);
-                    }
-                } else {
-                    return Err(String::from("`otp` not in the response"));
-                }
-                if let Some(returned_nonce) = kvs.get("nonce") {
-                    if *returned_nonce != nonce {
-                        error!("Nonce in the response does not match the request");
-                        // Reject
-                        return Ok(false);
-                    }
-                } else {
-                    return Err(String::from("`nonce` not in the response"));
-                }
-                // TODO: verify signature
-                return if let Some(status) = kvs.get("status") {
-                    if status == "OK" {
-                        Ok(true)
-                    } else {
-                        error!("Status {} is not OK", status);
-                        // Reject
-                        Ok(false)
-                    }
-                } else {
-                    Err(String::from("`status` not in the response"))
-                };
-            } else {
-                last_error = resp.unwrap_err().to_string();
+                let (key, value) = line
+                    .split_once('=')
+                    .ok_or_else(|| format!("Malformed reply {:?}: missing key or value", line))?;
+                kvs.insert(key.to_string(), value.to_string());
             }
+            if let Some(returned_otp) = kvs.get("otp") {
+                if returned_otp != otp {
+                    error!("OTP in the response does not match the request");
+                    // Reject
+                    return Ok(false);
+                }
+            } else {
+                return Err(String::from("`otp` not in the response"));
+            }
+            if let Some(returned_nonce) = kvs.get("nonce") {
+                if *returned_nonce != nonce {
+                    error!("Nonce in the response does not match the request");
+                    // Reject
+                    return Ok(false);
+                }
+            } else {
+                return Err(String::from("`nonce` not in the response"));
+            }
+            // TODO: verify signature
+            return if let Some(status) = kvs.get("status") {
+                if status == "OK" {
+                    Ok(true)
+                } else {
+                    error!("Status {} is not OK", status);
+                    // Reject
+                    Ok(false)
+                }
+            } else {
+                Err(String::from("`status` not in the response"))
+            };
         }
-        Err(last_error)
+        last_error = resp.unwrap_err().to_string();
     }
+    Err(last_error)
 }
 
-impl<'a> Authenticator<'a> for YubicoAuthenticator<'a> {
-    fn init(config: &'a SecRcCfg) -> Self {
+impl<'a> Authenticator<'a> for YubicoAuthenticator {
+    fn init(config: &SecRcCfg) -> Self {
         YubicoAuthenticator {
-            config,
             yubico_id: if let Some(supplied_yubico_id) = &config.yubico_id {
                 if supplied_yubico_id.len() < 12 {
                     None
@@ -126,6 +121,11 @@ impl<'a> Authenticator<'a> for YubicoAuthenticator<'a> {
             stdout().flush().ok();
             if let Err(error) = stdin().read_line(&mut input) {
                 error!("{}", error);
+                return None;
+            }
+            input = input.trim().to_string();
+            if input.is_empty() {
+                // Skip this authenticator
                 None
             } else if input.len() < 14 {
                 error!("Malformed OTP");
@@ -134,12 +134,12 @@ impl<'a> Authenticator<'a> for YubicoAuthenticator<'a> {
                 error!("Incorrect Yubikey ID");
                 Some(false)
             } else {
-                self.verify_otp(&input.trim_end()).map_or_else(
+                verify_otp(&input).map_or_else(
                     |err| {
                         error!("{:?}", err);
                         None
                     },
-                    |result| Some(result),
+                    Some,
                 )
             }
         } else {
@@ -148,6 +148,21 @@ impl<'a> Authenticator<'a> for YubicoAuthenticator<'a> {
     }
 
     fn is_accepted_exec(&self, cmd: &mut String) -> Option<bool> {
-        todo!()
+        if cmd.len() < 44 {
+            return None;
+        }
+        verify_otp(&cmd[0..44]).map_or_else(
+            |err| {
+                error!("{:?}", err);
+                None
+            },
+            |result| {
+                if result {
+                    // Remove the code
+                    *cmd = cmd[44..cmd.len()].to_string();
+                }
+                Some(result)
+            },
+        )
     }
 }

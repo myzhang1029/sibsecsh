@@ -122,7 +122,7 @@ fn main() {
 
     if let Err(e) = CombinedLogger::init(vec![
         TermLogger::new(
-            LevelFilter::Error,
+            LevelFilter::Warn,
             log_format.clone(),
             TerminalMode::Mixed,
             ColorChoice::Auto,

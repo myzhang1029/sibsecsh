@@ -176,8 +176,7 @@ impl<'a> Authenticator<'a> for EmailAuthenticator<'a> {
                 tries = 0;
                 break;
             }
-            info!("Got wrong email {:?}", input);
-            eprintln!("Not match");
+            warn!("Wrong email {:?}", input);
         }
         if tries != 0 {
             // Maximum number of tries exceeded
@@ -209,8 +208,7 @@ impl<'a> Authenticator<'a> for EmailAuthenticator<'a> {
                 return Some(true);
             } else {
                 // Not 0 nor matched
-                info!("Got wrong login code {:?}", input);
-                eprintln!("Not match");
+                warn!("Wrong login code {:?}", input);
             }
         }
         // Maximum number of tries exceeded

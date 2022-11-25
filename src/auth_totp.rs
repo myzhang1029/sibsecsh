@@ -19,7 +19,7 @@
 
 use crate::auth::Authenticator;
 use crate::config::SecRcCfg;
-use log::{error, info};
+use log::{error, warn};
 use oath::{totp_raw_custom_time, HashType};
 use std::io::{stdin, stdout, Write};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -127,8 +127,7 @@ impl<'a> Authenticator<'a> for TotpAuthenticator<'a> {
                         return Some(true);
                     }
                 }
-                info!("Got wrong code {:?}", input);
-                eprintln!("Not match");
+                warn!("Wrong code {:?}", input);
             }
             // Maximum number of tries exceeded
             error!("Maximum number of retries exceeded");
