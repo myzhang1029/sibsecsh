@@ -1,0 +1,51 @@
+# Warning: test your configuration by unsetting
+# $SIB_FROM_IP and $SSH_CONNECTION before disconnecting from a headless
+# server or you may lose access!
+
+# Default: []
+accepted_ips = [
+    "192.168.1.0/24",
+    "fe80::/88",
+]
+
+# Required. Make sure it is in /etc/shells.
+shell = "/bin/zsh"
+
+# Default: "". There is no way to escape whitespace.
+shell_args = "--login"
+
+# Required. Make sure this file exists and is writable.
+log_file = "/var/log/sibsecsh.log"
+
+# Default: /tmp/sibsecsh. Make sure this directory is writable.
+tmpdir = "/tmp/sibsecsh"
+
+# Required to use the email authenticator.
+email = "user@example.com"
+
+# Required to use the email authenticator.
+mail_host = "mail.example.com"
+
+# Default: 587
+mail_port = 587
+
+# Required to use the email authenticator.
+mail_from = "bot@example.com"
+
+# Default: empty password. There is no way to escape whitespace.
+mail_passwdcmd = ""
+
+# Required to use the TOTP authenticator. In base32 format.
+totp_secret = "EXAMPLA="
+
+# Default: 6
+totp_digits = 6
+
+# Default: 30
+totp_timestep = 30
+
+# Default: SHA1
+totp_hash = "SHA1"
+
+# Required to use the Yubico authenticator. Only the first 12 characters matter.
+yubico_id = "cccjgjgkhcbbirdrfdnlnghhfgrtnnlgedjlftrbdeut"
