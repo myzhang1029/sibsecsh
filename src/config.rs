@@ -150,7 +150,7 @@ impl SecRcCfg {
         logfile_open_options
             .create(true)
             .append(true)
-            .open(&self.log_file.as_ref().ok_or_else(|| {
+            .open(self.log_file.as_ref().ok_or_else(|| {
                 Error::new(ErrorKind::Other, "`SecRcCfg.log_file` should not be `None`")
             })?)
     }

@@ -56,5 +56,5 @@ pub fn get_from() -> String {
         };
     }
     // Else: Most likely a reverse shell login
-    String::from("")
+    String::new()
 }
