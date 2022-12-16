@@ -26,7 +26,7 @@ use std::fs::File;
 use std::fs::OpenOptions;
 use std::io;
 use std::io::prelude::*;
-use std::io::{Error, ErrorKind};
+use thiserror::Error;
 
 /// Type for deserializing a secrc.toml
 /// Representing a sib secure shell configuration
@@ -48,6 +48,21 @@ pub struct SecRcCfg {
     pub totp_timestep: Option<u64>,
     pub totp_hash: Option<String>,
     pub yubico_id: Option<String>,
+}
+
+/// Error type for the configuration
+#[derive(Error, Debug)]
+pub enum Error {
+    #[error("no configuration found")]
+    MissingConfig,
+    #[error("invalid config: {0}")]
+    InvalidConfig(String),
+    #[error("IO error")]
+    Io(#[from] std::io::Error),
+    #[error("non-standard shell")]
+    NonStandardShell,
+    #[error("cannot execute shell")]
+    ShellExec(#[from] exec::Error),
 }
 
 impl SecRcCfg {
@@ -114,7 +129,7 @@ impl SecRcCfg {
     }
 
     /// Load configuration from all designated locations, latter overriding former ones
-    pub fn load_all_possible(&mut self) -> io::Result<()> {
+    pub fn load_all_possible(&mut self) -> Result<(), Error> {
         // A warning will be emitted if no configuration is found
         let mut found_any = false;
 
@@ -140,23 +155,22 @@ impl SecRcCfg {
         if found_any {
             Ok(())
         } else {
-            Err(Error::new(ErrorKind::Other, "No configuration found"))
+            Err(Error::MissingConfig)
         }
     }
 
     /// Open the log file specified in the config in append mode
-    pub fn open_log(&self) -> io::Result<File> {
+    pub fn open_log(&self) -> Result<File, Error> {
         let mut logfile_open_options = OpenOptions::new();
-        logfile_open_options
-            .create(true)
-            .append(true)
-            .open(self.log_file.as_ref().ok_or_else(|| {
-                Error::new(ErrorKind::Other, "`SecRcCfg.log_file` should not be `None`")
-            })?)
+        Ok(logfile_open_options.create(true).append(true).open(
+            self.log_file.as_ref().ok_or_else(|| {
+                Error::InvalidConfig(String::from("`SecRcCfg.log_file` should not be `None`"))
+            })?,
+        )?)
     }
 
     /// Execute the configured shell, replacing the current process
-    pub fn execute_shell(&self, mut additional_params: Vec<String>) -> Result<(), String> {
+    pub fn execute_shell(&self, mut additional_params: Vec<String>) -> Result<(), Error> {
         let mut args: Vec<String> = self
             .shell_args
             .as_ref()
@@ -170,21 +184,22 @@ impl SecRcCfg {
         let shell = self
             .shell
             .as_ref()
-            .ok_or("`SecRcCfg.shell` should not be `None`")?;
+            .ok_or(Error::InvalidConfig(String::from(
+                "`SecRcCfg.shell` should not be `None`",
+            )))?;
 
         match search_shells(shell) {
             Ok(found) => {
                 if !found {
-                    return Err("non-standard shell".to_string());
+                    return Err(Error::NonStandardShell);
                 }
             }
             Err(e) => {
                 warn!("Cannot search for shells: {:?}", e);
             }
         };
-        Err(format!(
-            "Cannot execute shell{:?}",
-            Command::new(shell.clone()).args(&args).exec()
+        Err(Error::ShellExec(
+            Command::new(shell.clone()).args(&args).exec(),
         ))
     }
 }

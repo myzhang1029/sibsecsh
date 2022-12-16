@@ -32,7 +32,7 @@ use rand::Rng;
 use std::fs::{remove_file, File};
 use std::io::{stdin, stdout, Read, Write};
 use std::path::PathBuf;
-use subprocess::{Exec, PopenError, Redirection};
+use std::process::{Command, Stdio};
 use thiserror::Error;
 
 pub struct EmailAuthenticator<'a> {
@@ -42,17 +42,19 @@ pub struct EmailAuthenticator<'a> {
 }
 
 #[derive(Error, Debug)]
-pub enum EmailAuthenticatorError {
+pub enum Error {
     #[error("invalid `mail_passwdcmd`")]
     InvalidPasswdCmd,
-    #[error("`mail_passwdcmd` failed")]
-    PasswdCmdError(#[from] PopenError),
+    #[error("`mail_passwdcmd` execution failed")]
+    PasswdCmdFailed(#[from] std::io::Error),
+    #[error("cannot decode `mail_passwdcmd` output as UTF-8")]
+    PasswdCmdDecode(#[from] std::str::Utf8Error),
     #[error("invalid `mail_from`")]
     InvalidMailFrom(#[from] AddressError),
     #[error("cannot build email")]
-    BuildEmailError(#[from] LettreError),
+    BuildEmail(#[from] LettreError),
     #[error("cannot send email")]
-    SendEmailError(#[from] SmtpError),
+    SendEmail(#[from] SmtpError),
 }
 
 impl<'a> EmailAuthenticator<'a> {
@@ -61,25 +63,24 @@ impl<'a> EmailAuthenticator<'a> {
         rng.gen_range(100_000..1_000_000)
     }
 
-    fn read_password(&self) -> Result<String, EmailAuthenticatorError> {
+    fn read_password(&self) -> Result<String, Error> {
         if let Some(passwdcmd) = &self.config.mail_passwdcmd {
             let mut args = passwdcmd.split_whitespace();
-            let cmd = args.next().ok_or(EmailAuthenticatorError::InvalidPasswdCmd)?;
+            let cmd = args.next().ok_or(Error::InvalidPasswdCmd)?;
             let cmd_args: Vec<String> = args.map(std::string::ToString::to_string).collect();
 
-            Ok(Exec::cmd(cmd)
+            let output = Command::new(cmd)
                 .args(&cmd_args)
-                .stdout(Redirection::Pipe)
-                .capture()?
-                .stdout_str()
-                .trim()
-                .to_string())
+                .stdout(Stdio::piped())
+                .output()?
+                .stdout;
+            Ok(std::str::from_utf8(&output)?.trim().to_string())
         } else {
             Ok(String::new())
         }
     }
 
-    fn send_email(&self, moreinfo: &str) -> Result<(), EmailAuthenticatorError> {
+    fn send_email(&self, moreinfo: &str) -> Result<(), Error> {
         let mail_from = self
             .config
             .mail_from
@@ -103,7 +104,7 @@ impl<'a> EmailAuthenticator<'a> {
                 .expect("Bug: `config.email` should not be `None` here")
                 .parse()?)
             .subject("Login Code")
-            .body(format!("Your code is {}{}.", self.code, moreinfo))?;
+            .body(format!("Your code is {}{moreinfo}.", self.code))?;
 
         let password = self.read_password()?;
         let cred = Credentials::new(mail_from.clone(), password);
@@ -171,7 +172,7 @@ impl<'a> Authenticator<'a> for EmailAuthenticator<'a> {
         while tries < 3 {
             let mut input = String::new();
             tries += 1;
-            print!("Enter your email matching {}: ", shadowemail);
+            print!("Enter your email matching {shadowemail}: ");
             stdout().flush().ok();
             if let Err(error) = stdin.read_line(&mut input) {
                 error!("{}", error);
@@ -246,7 +247,7 @@ impl<'a> Authenticator<'a> for EmailAuthenticator<'a> {
                 Ok(mut file) => {
                     file.write(self.code.to_string().as_bytes()).ok();
                 }
-                // This is certainlty unwanted
+                // This is certainly unwanted
                 Err(e) => error!("Create code file failed: {}", e),
             }
             // Cancel execution

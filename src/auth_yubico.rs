@@ -60,7 +60,7 @@ fn verify_otp(otp: &str) -> Result<bool, String> {
                 }
                 let (key, value) = line
                     .split_once('=')
-                    .ok_or_else(|| format!("Malformed reply {:?}: missing key or value", line))?;
+                    .ok_or_else(|| format!("Malformed reply {line:?}: missing key or value"))?;
                 kvs.insert(key.to_string(), value.to_string());
             }
             if let Some(returned_otp) = kvs.get("otp") {

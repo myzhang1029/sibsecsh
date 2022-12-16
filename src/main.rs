@@ -70,7 +70,9 @@ fn do_check_auth<'a>(
     match is_accepted {
         Some(value) => {
             if value {
-                configuration.execute_shell(exec_options)
+                configuration
+                    .execute_shell(exec_options)
+                    .map_err(|e| format!("{e}"))
             } else {
                 Err("Rejected".to_string())
             }
@@ -81,7 +83,7 @@ fn do_check_auth<'a>(
 
 #[allow(clippy::needless_pass_by_value)]
 fn print_err_exit(msg: String) -> Result<(), String> {
-    panic!("Sorry: {}", msg);
+    panic!("Sorry: {msg}");
 }
 
 fn main() {
@@ -95,9 +97,9 @@ fn main() {
             eprint!("Panic occurred");
         }
         if let Some(msg) = panic_info.payload().downcast_ref::<&str>() {
-            eprintln!(": {}", msg);
+            eprintln!(": {msg}");
         } else if let Some(msg) = panic_info.payload().downcast_ref::<String>() {
-            eprintln!(": {}", msg);
+            eprintln!(": {msg}");
         } else {
             eprintln!();
         }
@@ -108,7 +110,7 @@ fn main() {
     let load_result = configuration.load_all_possible();
     let log_file = match configuration.open_log() {
         Ok(f) => f,
-        Err(e) => panic!("Cannot open log file: {}", e),
+        Err(e) => panic!("Cannot open log file: {e}"),
     };
     let log_format = ConfigBuilder::new()
         .set_time_offset_to_local()
@@ -128,7 +130,7 @@ fn main() {
         ),
         WriteLogger::new(LevelFilter::Info, log_format, log_file),
     ]) {
-        panic!("Cannot create logger: {}", e);
+        panic!("Cannot create logger: {e}");
     }
 
     if load_result.is_err() {

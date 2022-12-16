@@ -20,17 +20,25 @@
 use log::debug;
 use regex::Regex;
 use std::env;
-use subprocess::{Exec, PopenError, Redirection};
+use std::process::{Command, Stdio};
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum Error {
+    #[error("execution error")]
+    Io(#[from] std::io::Error),
+    #[error("cannot decode UTF-8")]
+    Decode(#[from] std::str::Utf8Error),
+}
 
 /// Get the output of who -u am i
-fn read_who_ami() -> Result<String, PopenError> {
-    Ok(Exec::cmd("/usr/bin/who")
-        .args(&["-u", "am", "i"])
-        .stdout(Redirection::Pipe)
-        .capture()?
-        .stdout_str()
-        .trim()
-        .to_string())
+fn read_who_ami() -> Result<String, Error> {
+    let output = Command::new("/usr/bin/who")
+        .args(["-u", "am", "i"])
+        .stdout(Stdio::piped())
+        .output()?
+        .stdout;
+    Ok(std::str::from_utf8(&output)?.trim().to_string())
 }
 
 /// Get login source IP address
