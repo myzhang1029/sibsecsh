@@ -19,21 +19,40 @@
 
 use crate::auth::Authenticator;
 use crate::config::SecRcCfg;
-use crate::extend_lettre::new_simple_port;
-use lettre::smtp::authentication::Credentials;
-use lettre::Transport;
-use lettre_email::EmailBuilder;
+use lettre::transport::smtp::{
+    authentication::Credentials,
+    client::{Tls, TlsParameters},
+    Error as SmtpError,
+};
+use lettre::{
+    address::AddressError, error::Error as LettreError, Message, SmtpTransport, Transport,
+};
 use log::{debug, error, info, warn};
 use rand::Rng;
 use std::fs::{remove_file, File};
 use std::io::{stdin, stdout, Read, Write};
 use std::path::PathBuf;
-use subprocess::{Exec, Redirection};
+use subprocess::{Exec, PopenError, Redirection};
+use thiserror::Error;
 
 pub struct EmailAuthenticator<'a> {
     config: &'a SecRcCfg,
     enabled: bool,
     code: u32,
+}
+
+#[derive(Error, Debug)]
+pub enum AuthEmailError {
+    #[error("invalid `mail_passwdcmd`")]
+    InvalidPasswdCmd,
+    #[error("`mail_passwdcmd` failed")]
+    PasswdCmdError(#[from] PopenError),
+    #[error("invalid `mail_from`")]
+    InvalidMailFrom(#[from] AddressError),
+    #[error("cannot build email")]
+    BuildEmailError(#[from] LettreError),
+    #[error("cannot send email")]
+    SendEmailError(#[from] SmtpError),
 }
 
 impl<'a> EmailAuthenticator<'a> {
@@ -42,17 +61,16 @@ impl<'a> EmailAuthenticator<'a> {
         rng.gen_range(100_000..1_000_000)
     }
 
-    fn read_password(&self) -> Result<String, String> {
+    fn read_password(&self) -> Result<String, AuthEmailError> {
         if let Some(passwdcmd) = &self.config.mail_passwdcmd {
             let mut args = passwdcmd.split_whitespace();
-            let cmd = args.next().ok_or("Invalid mail_passwdcmd")?;
+            let cmd = args.next().ok_or(AuthEmailError::InvalidPasswdCmd)?;
             let cmd_args: Vec<String> = args.map(std::string::ToString::to_string).collect();
 
             Ok(Exec::cmd(cmd)
                 .args(&cmd_args)
                 .stdout(Redirection::Pipe)
-                .capture()
-                .map_err(|e| format!("Cannot run mail_passwdcmd: {:?}", e))?
+                .capture()?
                 .stdout_str()
                 .trim()
                 .to_string())
@@ -61,7 +79,7 @@ impl<'a> EmailAuthenticator<'a> {
         }
     }
 
-    fn send_email(&self, moreinfo: &str) -> Result<(), String> {
+    fn send_email(&self, moreinfo: &str) -> Result<(), AuthEmailError> {
         let mail_from = self
             .config
             .mail_from
@@ -76,40 +94,32 @@ impl<'a> EmailAuthenticator<'a> {
             .mail_host
             .as_ref()
             .expect("Bug: `config.mail_host` should not be `None` here");
-        let email = match EmailBuilder::new()
+        let email = Message::builder()
+            .from(mail_from.parse()?)
             .to(self
                 .config
                 .email
                 .as_ref()
                 .expect("Bug: `config.email` should not be `None` here")
-                .clone())
-            .from((mail_from, "SIB Secure Shell"))
+                .parse()?)
             .subject("Login Code")
-            .text(format!("Your code is {}{}.", self.code, moreinfo))
-            .build()
-        {
-            Ok(email) => email,
-            Err(error) => return Err(format!("Cannot build email: {:?}", error)),
-        };
+            .body(format!("Your code is {}{}.", self.code, moreinfo))?;
 
         let password = self.read_password()?;
         let cred = Credentials::new(mail_from.clone(), password);
 
         info!("Sending email to {:?}", self.config.email);
 
-        let mut mailer = new_simple_port(mail_host, mail_port)
-            .unwrap()
-            .credentials(cred)
-            .transport();
+        let tls_parameters = TlsParameters::new(mail_host.into())?;
 
-        // Send the email
-        match mailer.send(email.into()) {
-            Ok(_) => {
-                debug!("Email sent");
-                Ok(())
-            }
-            Err(e) => Err(format!("Cannot send email: {:?}", e)),
-        }
+        SmtpTransport::builder_dangerous(mail_host)
+            .port(mail_port)
+            .tls(Tls::Required(tls_parameters))
+            .credentials(cred)
+            .build()
+            .send(&email.into())?;
+        debug!("Email sent");
+        Ok(())
     }
 }
 

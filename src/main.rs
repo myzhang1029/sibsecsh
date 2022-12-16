@@ -38,7 +38,6 @@ mod auth_email;
 mod auth_totp;
 mod auth_yubico;
 mod config;
-mod extend_lettre;
 mod ip;
 mod parse_args;
 
