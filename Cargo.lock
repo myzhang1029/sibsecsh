@@ -552,7 +552,7 @@ dependencies = [
 
 [[package]]
 name = "sibsecsh"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "cidr",
  "exec",

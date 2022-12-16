@@ -42,7 +42,7 @@ pub struct EmailAuthenticator<'a> {
 }
 
 #[derive(Error, Debug)]
-pub enum AuthEmailError {
+pub enum EmailAuthenticatorError {
     #[error("invalid `mail_passwdcmd`")]
     InvalidPasswdCmd,
     #[error("`mail_passwdcmd` failed")]
@@ -61,10 +61,10 @@ impl<'a> EmailAuthenticator<'a> {
         rng.gen_range(100_000..1_000_000)
     }
 
-    fn read_password(&self) -> Result<String, AuthEmailError> {
+    fn read_password(&self) -> Result<String, EmailAuthenticatorError> {
         if let Some(passwdcmd) = &self.config.mail_passwdcmd {
             let mut args = passwdcmd.split_whitespace();
-            let cmd = args.next().ok_or(AuthEmailError::InvalidPasswdCmd)?;
+            let cmd = args.next().ok_or(EmailAuthenticatorError::InvalidPasswdCmd)?;
             let cmd_args: Vec<String> = args.map(std::string::ToString::to_string).collect();
 
             Ok(Exec::cmd(cmd)
@@ -79,7 +79,7 @@ impl<'a> EmailAuthenticator<'a> {
         }
     }
 
-    fn send_email(&self, moreinfo: &str) -> Result<(), AuthEmailError> {
+    fn send_email(&self, moreinfo: &str) -> Result<(), EmailAuthenticatorError> {
         let mail_from = self
             .config
             .mail_from
@@ -117,7 +117,7 @@ impl<'a> EmailAuthenticator<'a> {
             .tls(Tls::Required(tls_parameters))
             .credentials(cred)
             .build()
-            .send(&email.into())?;
+            .send(&email)?;
         debug!("Email sent");
         Ok(())
     }
