@@ -20,80 +20,61 @@
 use crate::auth::Authenticator;
 use crate::config::SecRcCfg;
 use log::{error, warn};
-use oath::{totp_raw_custom_time, HashType};
 use std::io::{stdin, stdout, Write};
-use std::time::{SystemTime, UNIX_EPOCH};
+use totp_rs::{Algorithm, Secret, TOTP};
 
 pub struct TotpAuthenticator<'a> {
     config: &'a SecRcCfg,
     enabled: bool,
-    hashtype: HashType,
+    hashtype: Algorithm,
 }
 
 impl<'a> TotpAuthenticator<'a> {
     /// Compares a TOTP code with the correct one, tolerating the one before
     /// and the one after to take networking and time inaccuracy into account.
-    fn compare_code(&self, code: u64) -> Option<bool> {
-        // Get UNIX time
-        let now: u64 = match SystemTime::now().duration_since(UNIX_EPOCH) {
-            Ok(time_now) => time_now.as_secs(),
-            Err(_e) => {
-                error!("Earlier than 1970-01-01 00:00:00 UTC");
-                return None;
-            }
-        };
-        // Error would have been logged
-        let secret = b64_to_bytes(
+    fn compare_code(&self, code: &str) -> Option<bool> {
+        let Ok(secret) = Secret::Encoded(
             self.config
                 .totp_secret
-                .as_ref()
+                .clone()
                 .expect("Bug: `config.totp_secret` should not be `None` here"),
-        )?;
-        let totp_digits = self
-            .config
-            .totp_digits
-            .expect("Bug: `config.totp_digit` should not be `None` here");
-        let totp_timestep = self
-            .config
-            .totp_timestep
-            .expect("Bug: `config.totp_timestep` should not be `None` here");
-        // code_1 is the most likely
-        let code_1 =
-            totp_raw_custom_time(&secret, totp_digits, 0, totp_timestep, now, &self.hashtype);
-        // code_2 is also likely
-        let code_2 = totp_raw_custom_time(
-            &secret,
-            totp_digits,
-            0,
-            totp_timestep,
-            now - 30,
-            &self.hashtype,
-        );
-        // code_3 is not so likely
-        let code_3 = totp_raw_custom_time(
-            &secret,
-            totp_digits,
-            0,
-            totp_timestep,
-            now + 30,
-            &self.hashtype,
-        );
-        Some(code == code_1 || code == code_2 || code == code_3)
+        )
+        .to_bytes() else {
+            error!("Invalid TOTP secret");
+            return None;
+        };
+        let totp = TOTP {
+            algorithm: self.hashtype,
+            digits: self
+                .config
+                .totp_digits
+                .expect("Bug: `config.totp_digit` should not be `None` here")
+                as usize,
+            skew: 1,
+            step: self
+                .config
+                .totp_timestep
+                .expect("Bug: `config.totp_timestep` should not be `None` here"),
+            secret,
+        };
+        totp.check_current(code)
+            .map_err(|e| error!("Cannot retrieve system time: {e}"))
+            .ok()
     }
 }
 
 impl<'a> Authenticator<'a> for TotpAuthenticator<'a> {
     fn init(config: &'a SecRcCfg) -> Self {
-        let mut hashtype = HashType::SHA1;
+        let mut hashtype = Algorithm::SHA1;
         if let Some(config_hash_type) = &config.totp_hash {
             let strlen = config_hash_type.len();
 
             if config_hash_type[0..3].to_uppercase() != "SHA" {
                 error!("Invalid totp_hash type");
             } else if config_hash_type[strlen - 3..strlen] == *"512" {
-                hashtype = HashType::SHA512;
+                hashtype = Algorithm::SHA512;
             } else if config_hash_type[strlen - 3..strlen] == *"256" {
-                hashtype = HashType::SHA256;
+                hashtype = Algorithm::SHA256;
             }
         }
         let enabled = config.totp_secret.is_some();
@@ -117,15 +98,13 @@ impl<'a> Authenticator<'a> for TotpAuthenticator<'a> {
                     error!("{}", error);
                     return None;
                 }
-                input = input.trim().to_string();
+                let input = input.trim();
                 if input.is_empty() {
                     // Skip this authenticator
                     return None;
                 }
-                if let Ok(input) = input.parse() {
-                    if self.compare_code(input)? {
-                        return Some(true);
-                    }
+                if self.compare_code(input)? {
+                    return Some(true);
                 }
                 warn!("Wrong code {:?}", input);
             }
@@ -148,7 +127,7 @@ impl<'a> Authenticator<'a> for TotpAuthenticator<'a> {
                 return None;
             }
             // A missing code becomes None
-            let input: u64 = cmd[0..totp_digits].parse().ok()?;
+            let input = &cmd[0..totp_digits];
             if self.compare_code(input)? {
                 // Remove the code
                 *cmd = cmd[totp_digits..cmd.len()].to_string();
@@ -162,6 +141,7 @@ impl<'a> Authenticator<'a> for TotpAuthenticator<'a> {
     }
 }
 
+/* Not used anymore, kept for reference.
 fn b64_to_bytes(b64: &str) -> Option<Vec<u8>> {
     let no_equal = b64.trim_end_matches('=').to_uppercase();
     let num_padded_zero: u8 = match b64.len() - no_equal.len() {
@@ -206,7 +186,6 @@ fn b64_to_bytes(b64: &str) -> Option<Vec<u8>> {
     Some(result)
 }
 
-/* Not used anymore, kept for reference.
 fn b64_to_hex(b64: &str) -> Option<String> {
     //const conversion: &'static str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
     const HEX_TABLE: &'static str = "0123456789ABCDEF";

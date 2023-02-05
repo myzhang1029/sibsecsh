@@ -63,11 +63,13 @@ pub enum Error {
     NonStandardShell,
     #[error("cannot execute shell")]
     ShellExec(#[from] exec::Error),
+    #[error("cannot parse TOML: {0}")]
+    TomlParse(#[from] toml::de::Error),
 }
 
 impl SecRcCfg {
     /// Parse and load a configuration file in TOML format at `FILE_PATH`
-    pub fn load_config(&mut self, file_path: &str) -> io::Result<()> {
+    pub fn load_config(&mut self, file_path: &str) -> Result<(), Error> {
         let mut file = File::open(file_path)?;
         let mut file_content = String::new();
         file.read_to_string(&mut file_content)?;

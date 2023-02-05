@@ -12,12 +12,12 @@ exec = "0.3"
 home = "0.5"
 lettre = { version = "0.10", default-features = false, features = ["builder", "rustls-tls", "smtp-transport"] }
 log = "0.4"
-oath = { version = "0.10", git = "https://github.com/myzhang1029/rust-oath" }
 rand = "0.8"
 regex = "1"
 serde = { version = "1", features = ["derive"] }
 simplelog = "0.12"
 thiserror = "1"
-toml = { version = "0.5", default-features = false }
+toml = "0.7"
+totp-rs = "4"
 ureq = "2"
 users = "0.11"
