@@ -13,11 +13,11 @@ home = "0.5"
 lettre = { version = "0.10", default-features = false, features = ["builder", "rustls-tls", "smtp-transport"] }
 log = "0.4"
 rand = "0.8"
-regex = "1"
+regex = ">=1.5.5"
 serde = { version = "1", features = ["derive"] }
 simplelog = "0.12"
 thiserror = "1"
 toml = "0.7"
-totp-rs = "4"
+totp-rs = "5"
 ureq = "2"
 users = "0.11"
