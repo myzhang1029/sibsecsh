@@ -1,5 +1,5 @@
 //
-//  Copyright (C) 2022 Zhang Maiyun <me@myzhangll.xyz>
+//  Copyright (C) 2022 Zhang Maiyun <me@maiyun.me>
 //
 //  This file is part of sib secure shell.
 //

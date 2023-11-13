@@ -1,7 +1,7 @@
 //! sibsecsh is a two factor authentication application designed to be used
 //! as the login shell. It acts as a wrapper around the actual shell process.
 //
-//  Copyright (C) 2021 Zhang Maiyun <me@myzhangll.xyz>
+//  Copyright (C) 2021 Zhang Maiyun <me@maiyun.me>
 //
 //  This file is part of sib secure shell.
 //
