@@ -46,8 +46,6 @@ use log::{info, warn};
 use simplelog::{
     ColorChoice, CombinedLogger, ConfigBuilder, LevelFilter, TermLogger, TerminalMode, WriteLogger,
 };
-use std::ffi::OsString;
-use users::get_current_username;
 
 fn do_check_auth<'a>(
     authenticator: &impl Authenticator<'a>,
@@ -87,8 +85,6 @@ fn print_err_exit(msg: String) -> Result<(), String> {
 }
 
 fn main() {
-    const UNKNOWN: &str = "unknown user";
-
     // Wait for user input before panic!king.
     std::panic::set_hook(Box::new(|panic_info| {
         if let Some(location) = panic_info.location() {
@@ -136,10 +132,7 @@ fn main() {
     if load_result.is_err() {
         warn!("No configuration supplied!");
     }
-    let username = get_current_username()
-        .or_else(|| Some(OsString::from(UNKNOWN)))
-        .unwrap();
-    let username = username.to_str().unwrap_or(UNKNOWN);
+    let username = whoami::username();
     info!("Login attempt from {} for {}", ip::get_from(), username);
     do_check_auth(
         &auth::BypassAuthenticator::init(&configuration),
