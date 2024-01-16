@@ -221,24 +221,24 @@ impl Default for SecRcCfg {
         SecRcCfg {
             accepted_ips: Some(vec![]),
             shell: None,
-            /// Default to have no args
+            // Default to have no args
             shell_args: Some(String::default()),
             log_file: Some(String::from("/var/log/sibsecsh.log")),
             tmpdir: Some(tmpdir),
-            /// None disables this authenticator
-            /// Not prefixed by `mail_` for compatibility reason
+            // None disables this authenticator
+            // Not prefixed by `mail_` for compatibility reason
             email: None,
             mail_host: None,
             mail_port: Some(587),
             mail_from: None,
             mail_passwdcmd: None,
-            /// None disables this authenticator
+            // None disables this authenticator
             totp_secret: None,
             totp_digits: Some(6),
             totp_timestep: Some(30),
             totp_hash: Some(String::from("SHA1")),
-            /// None disables this authenticator
-            /// Only the first 12 characters matter
+            // None disables this authenticator
+            // Only the first 12 characters matter
             yubico_id: None,
         }
     }
