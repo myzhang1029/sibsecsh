@@ -67,7 +67,7 @@ impl<'a> EmailAuthenticator<'a> {
         if let Some(passwdcmd) = &self.config.mail_passwdcmd {
             let mut args = passwdcmd.split_whitespace();
             let cmd = args.next().ok_or(Error::InvalidPasswdCmd)?;
-            let cmd_args: Vec<String> = args.map(std::string::ToString::to_string).collect();
+            let cmd_args: Vec<String> = args.map(ToString::to_string).collect();
 
             let output = Command::new(cmd)
                 .args(&cmd_args)
@@ -245,7 +245,7 @@ impl<'a> Authenticator<'a> for EmailAuthenticator<'a> {
             // Write the generated code
             match File::create(sib_code_file) {
                 Ok(mut file) => {
-                    file.write(self.code.to_string().as_bytes()).ok();
+                    file.write_all(self.code.to_string().as_bytes()).ok();
                 }
                 // This is certainly unwanted
                 Err(e) => error!("Create code file failed: {}", e),

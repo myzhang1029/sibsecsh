@@ -58,7 +58,7 @@ pub enum Error {
     #[error("invalid config: {0}")]
     InvalidConfig(String),
     #[error("IO error")]
-    Io(#[from] std::io::Error),
+    Io(#[from] io::Error),
     #[error("non-standard shell")]
     NonStandardShell,
     #[error("cannot execute shell")]
@@ -179,7 +179,7 @@ impl SecRcCfg {
             // self.shell_args must not be None as guaranteed by Default-initialization
             .expect("Bug: `SecRcCfg.shell_args` should never be `None`")
             .split_whitespace()
-            .map(std::string::ToString::to_string)
+            .map(ToString::to_string)
             .collect();
         args.append(&mut additional_params);
         env::set_var("SIB_FROM_IP", get_from());
