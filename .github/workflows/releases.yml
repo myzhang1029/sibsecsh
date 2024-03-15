@@ -24,7 +24,7 @@ jobs:
 
     steps:
     - name: Checkout source
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Rust Cache
       uses: Swatinem/rust-cache@v1
@@ -36,7 +36,7 @@ jobs:
       run: bash -c "rm -rf target/release/sibsecsh.d"
 
     - name: Upload binary
-      uses: actions/upload-artifact@v2.2.4
+      uses: actions/upload-artifact@v4
       with:
         name: sibsecsh-${{ matrix.config.name }}
         path: target/release/sibsecsh*

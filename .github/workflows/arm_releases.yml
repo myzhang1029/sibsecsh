@@ -28,7 +28,7 @@ jobs:
 
     steps:
     - name: Checkout source
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Install dependencies
       run: |
@@ -45,7 +45,7 @@ jobs:
       run: bash -c "rm -rf target/${{ matrix.config.rust_target }}/release/sibsecsh.*"
 
     - name: Upload binary
-      uses: actions/upload-artifact@v2.2.4
+      uses: actions/upload-artifact@v4
       with:
         name: sibsecsh-${{ matrix.config.rust_target }}
         path: target/${{ matrix.config.rust_target }}/release/sibsecsh*
