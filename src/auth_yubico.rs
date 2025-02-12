@@ -20,7 +20,7 @@
 use crate::auth::Authenticator;
 use crate::config::SecRcCfg;
 use log::error;
-use rand::{distributions::Alphanumeric, Rng};
+use rand::{distr::Alphanumeric, Rng};
 use std::collections::BTreeMap;
 use std::io::{stdin, stdout, Write};
 
@@ -32,11 +32,11 @@ pub struct YubicoAuthenticator {
 const YUBICO_SERVER: &str = "https://api.yubico.com/wsapi/2.0/verify";
 
 fn verify_otp(otp: &str) -> Result<bool, String> {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     // Numeric id
-    let id: i32 = rng.gen_range(0..1_000);
+    let id: i32 = rng.random_range(0..1_000);
     // Random nonce
-    let nonce_len = rng.gen_range(16..41);
+    let nonce_len = rng.random_range(16..41);
     let nonce: String = rng
         .sample_iter(&Alphanumeric)
         .take(nonce_len)
@@ -52,7 +52,7 @@ fn verify_otp(otp: &str) -> Result<bool, String> {
             .call();
         if let Ok(resp) = resp {
             // Successful response. Let's verify
-            let result = resp.into_string().map_err(|e| e.to_string())?;
+            let result = resp.into_body().read_to_string().map_err(|e| e.to_string())?;
             let mut kvs: BTreeMap<String, String> = BTreeMap::new();
             for line in result.split("\r\n") {
                 if line.is_empty() {

@@ -28,7 +28,6 @@ use lettre::{
     address::AddressError, error::Error as LettreError, Message, SmtpTransport, Transport,
 };
 use log::{debug, error, info, warn};
-use rand::Rng;
 use std::fs::{remove_file, File};
 use std::io::{stdin, stdout, Read, Write};
 use std::path::PathBuf;
@@ -59,8 +58,7 @@ pub enum Error {
 
 impl<'a> EmailAuthenticator<'a> {
     fn gen_code() -> u32 {
-        let mut rng = rand::thread_rng();
-        rng.gen_range(100_000..1_000_000)
+        rand::random_range(100_000..1_000_000)
     }
 
     fn read_password(&self) -> Result<String, Error> {
