@@ -20,7 +20,7 @@
 use crate::auth::Authenticator;
 use crate::config::SecRcCfg;
 use log::{error, warn};
-use std::io::{stdin, stdout, Write};
+use std::io::{Write, stdin, stdout};
 use totp_rs::{Algorithm, Secret, TOTP};
 
 pub struct TotpAuthenticator<'a> {

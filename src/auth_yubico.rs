@@ -20,9 +20,9 @@
 use crate::auth::Authenticator;
 use crate::config::SecRcCfg;
 use log::error;
-use rand::{distr::Alphanumeric, Rng};
+use rand::{Rng, distr::Alphanumeric};
 use std::collections::BTreeMap;
-use std::io::{stdin, stdout, Write};
+use std::io::{Write, stdin, stdout};
 
 pub struct YubicoAuthenticator {
     // Also serves as `enabled`

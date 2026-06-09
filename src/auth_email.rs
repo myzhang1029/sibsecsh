@@ -20,16 +20,16 @@
 use crate::auth::Authenticator;
 use crate::config::SecRcCfg;
 use lettre::transport::smtp::{
+    Error as SmtpError,
     authentication::Credentials,
     client::{Tls, TlsParameters},
-    Error as SmtpError,
 };
 use lettre::{
-    address::AddressError, error::Error as LettreError, Message, SmtpTransport, Transport,
+    Message, SmtpTransport, Transport, address::AddressError, error::Error as LettreError,
 };
 use log::{debug, error, info, warn};
-use std::fs::{remove_file, File};
-use std::io::{stdin, stdout, Read, Write};
+use std::fs::{File, remove_file};
+use std::io::{Read, Write, stdin, stdout};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use thiserror::Error;

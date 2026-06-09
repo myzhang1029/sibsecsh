@@ -45,9 +45,10 @@ fn read_who_ami() -> Result<String, Error> {
 pub fn get_from() -> String {
     // First try to get the ip from $SSH_CONNECTION
     if let Ok(value) = env::var("SSH_CONNECTION")
-        && let Some(ip_address) = value.split_whitespace().next() {
-            return ip_address.to_string();
-        }
+        && let Some(ip_address) = value.split_whitespace().next()
+    {
+        return ip_address.to_string();
+    }
 
     // Try to do that with `who`
     if let Ok(value) = read_who_ami() {

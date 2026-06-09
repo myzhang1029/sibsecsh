@@ -139,14 +139,16 @@ impl SecRcCfg {
         if let Some(mut home_dir) = home::home_dir() {
             home_dir.push(".secrc");
             if let Some(path_str) = home_dir.to_str()
-                && self.load_config(path_str).is_ok() {
-                    found_any = true;
-                }
+                && self.load_config(path_str).is_ok()
+            {
+                found_any = true;
+            }
             home_dir.set_extension("toml");
             if let Some(path_str) = home_dir.to_str()
-                && self.load_config(path_str).is_ok() {
-                    found_any = true;
-                }
+                && self.load_config(path_str).is_ok()
+            {
+                found_any = true;
+            }
         }
         if found_any {
             Ok(())
