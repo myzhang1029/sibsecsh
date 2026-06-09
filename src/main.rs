@@ -127,7 +127,7 @@ fn main() {
     if load_result.is_err() {
         warn!("No configuration supplied!");
     }
-    let username = whoami::username();
+    let username = whoami::username().unwrap_or_else(|_| "<failed to get username>".to_string());
     info!("Login attempt from {} for {}", ip::get_from(), username);
     do_check_auth(
         &auth::BypassAuthenticator::init(&configuration),
