@@ -16,7 +16,7 @@ regex = "^1, >=1.5.5"
 serde = { version = "1", features = ["derive"] }
 simplelog = "0.12"
 thiserror = "2"
-toml = "0.8"
+toml = "1"
 totp-rs = "5"
 ureq = "3"
 whoami = "2"
