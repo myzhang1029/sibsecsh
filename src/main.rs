@@ -55,26 +55,21 @@ fn do_check_auth<'a>(
     let options = parse_args::parse_args();
     let mut other_options = options.1;
     let mut exec_options: Vec<String> = Vec::new();
-    let is_accepted = match options.0 {
-        Some(mut cmd) => {
+    let is_accepted = options.0.map_or_else(
+        || authenticator.is_accepted_login(),
+        |mut cmd| {
             let tmp = authenticator.is_accepted_exec(&mut cmd);
             exec_options.push(String::from("-c"));
             exec_options.push(cmd);
             tmp
-        }
-        None => authenticator.is_accepted_login(),
-    };
+        },
+    );
     exec_options.append(&mut other_options);
     match is_accepted {
-        Some(value) => {
-        if value {
-            configuration
-                .execute_shell(exec_options)
-                .map_err(|e| format!("{e}"))
-        } else {
-            Err("Rejected".to_string())
-        }
-        }
+        Some(true) => configuration
+            .execute_shell(exec_options)
+            .map_err(|e| e.to_string()),
+        Some(false) => Err("Rejected".to_string()),
         None => Ok(()),
     }
 }

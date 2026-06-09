@@ -178,22 +178,14 @@ impl SecRcCfg {
             .map(ToString::to_string)
             .collect();
         args.append(&mut additional_params);
-        let shell = self
-            .shell
-            .as_ref()
-            .ok_or(Error::InvalidConfig(String::from(
-                "`SecRcCfg.shell` should not be `None`",
-            )))?;
+        let shell = self.shell.as_ref().ok_or_else(|| {
+            Error::InvalidConfig(String::from("`SecRcCfg.shell` should not be `None`"))
+        })?;
 
         match search_shells(shell) {
-            Ok(found) => {
-                if !found {
-                    return Err(Error::NonStandardShell);
-                }
-            }
-            Err(e) => {
-                warn!("Cannot search for shells: {e:?}");
-            }
+            Ok(false) => return Err(Error::NonStandardShell),
+            Ok(true) => (),
+            Err(e) => warn!("Cannot search for shells: {e:?}"),
         }
         let err = std::process::Command::new(shell)
             .args(&args)

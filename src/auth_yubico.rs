@@ -85,16 +85,14 @@ fn verify_otp(otp: &str) -> Result<bool, String> {
                 return Err(String::from("`nonce` not in the response"));
             }
             // TODO: verify signature
-            return if let Some(status) = kvs.get("status") {
-                if status == "OK" {
-                    Ok(true)
-                } else {
+            return match kvs.get("status").map(String::as_str) {
+                None => Err(String::from("`status` not in the response")),
+                Some("OK") => Ok(true),
+                Some(status) => {
                     error!("Status {status} is not OK");
                     // Reject
                     Ok(false)
                 }
-            } else {
-                Err(String::from("`status` not in the response"))
             };
         }
         last_error = resp.unwrap_err().to_string();
@@ -105,15 +103,13 @@ fn verify_otp(otp: &str) -> Result<bool, String> {
 impl Authenticator<'_> for YubicoAuthenticator {
     fn init(config: &SecRcCfg) -> Self {
         Self {
-            yubico_id: if let Some(supplied_yubico_id) = &config.yubico_id {
+            yubico_id: config.yubico_id.as_ref().and_then(|supplied_yubico_id| {
                 if supplied_yubico_id.len() < 12 {
                     None
                 } else {
                     Some(supplied_yubico_id[0..12].to_string())
                 }
-            } else {
-                None
-            },
+            }),
         }
     }
 
