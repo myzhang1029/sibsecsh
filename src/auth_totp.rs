@@ -29,7 +29,7 @@ pub struct TotpAuthenticator<'a> {
     hashtype: Algorithm,
 }
 
-impl<'a> TotpAuthenticator<'a> {
+impl TotpAuthenticator<'_> {
     /// Compares a TOTP code with the correct one, tolerating the one before
     /// and the one after to take networking and time inaccuracy into account.
     fn compare_code(&self, code: &str) -> Option<bool> {
@@ -95,7 +95,7 @@ impl<'a> Authenticator<'a> for TotpAuthenticator<'a> {
                 print!("Enter the code displayed on your device: ");
                 stdout().flush().ok();
                 if let Err(error) = stdin.read_line(&mut input) {
-                    error!("{}", error);
+                    error!("{error}");
                     return None;
                 }
                 let input = input.trim();
@@ -106,7 +106,7 @@ impl<'a> Authenticator<'a> for TotpAuthenticator<'a> {
                 if self.compare_code(input)? {
                     return Some(true);
                 }
-                warn!("Wrong code {:?}", input);
+                warn!("Wrong code {input:?}");
             }
             // Maximum number of tries exceeded
             error!("Maximum number of retries exceeded");

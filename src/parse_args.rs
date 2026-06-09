@@ -24,7 +24,7 @@ use std::env;
 /// -c if any, and the second argument is the other arguments
 pub fn parse_args() -> (Option<String>, Vec<String>) {
     let all_args: Vec<String> = env::args().collect();
-    info!("Program arguments: {:?}", all_args);
+    info!("Program arguments: {all_args:?}");
     for (i, argument) in env::args().enumerate() {
         if argument == "-c" {
             let mut other: Vec<String> = all_args[1..i].to_vec();

@@ -52,7 +52,7 @@ pub fn get_from() -> String {
 
     // Try to do that with `who`
     if let Ok(value) = read_who_ami() {
-        debug!("Command `who -u am i` returned {:?}", value);
+        debug!("Command `who -u am i` returned {value:?}");
         match Regex::new(r"\(.*\)") {
             Ok(ip_re) => {
                 if let Some(ip_match) = ip_re.find(&value) {
@@ -60,8 +60,8 @@ pub fn get_from() -> String {
                     return value[ip_match.start() + 1..ip_match.end() - 1].to_string();
                 }
             }
-            Err(e) => debug!("Regular expression failed with error {:?}", e),
-        };
+            Err(e) => debug!("Regular expression failed with error {e:?}"),
+        }
     }
     // Else: Most likely a reverse shell login
     String::new()

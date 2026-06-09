@@ -46,13 +46,16 @@ fn verify_otp(otp: &str) -> Result<bool, String> {
     for _ in 0..3 {
         // TODO: signing
         let resp = ureq::get(YUBICO_SERVER)
-            .query("id", &id.to_string())
+            .query("id", id.to_string())
             .query("nonce", &nonce)
             .query("otp", otp)
             .call();
         if let Ok(resp) = resp {
             // Successful response. Let's verify
-            let result = resp.into_body().read_to_string().map_err(|e| e.to_string())?;
+            let result = resp
+                .into_body()
+                .read_to_string()
+                .map_err(|e| e.to_string())?;
             let mut kvs: BTreeMap<String, String> = BTreeMap::new();
             for line in result.split("\r\n") {
                 if line.is_empty() {
@@ -86,7 +89,7 @@ fn verify_otp(otp: &str) -> Result<bool, String> {
                 if status == "OK" {
                     Ok(true)
                 } else {
-                    error!("Status {} is not OK", status);
+                    error!("Status {status} is not OK");
                     // Reject
                     Ok(false)
                 }
@@ -99,7 +102,7 @@ fn verify_otp(otp: &str) -> Result<bool, String> {
     Err(last_error)
 }
 
-impl<'a> Authenticator<'a> for YubicoAuthenticator {
+impl Authenticator<'_> for YubicoAuthenticator {
     fn init(config: &SecRcCfg) -> Self {
         YubicoAuthenticator {
             yubico_id: if let Some(supplied_yubico_id) = &config.yubico_id {
@@ -120,7 +123,7 @@ impl<'a> Authenticator<'a> for YubicoAuthenticator {
             let mut input = String::new();
             stdout().flush().ok();
             if let Err(error) = stdin().read_line(&mut input) {
-                error!("{}", error);
+                error!("{error}");
                 return None;
             }
             input = input.trim().to_string();
@@ -136,7 +139,7 @@ impl<'a> Authenticator<'a> for YubicoAuthenticator {
             } else {
                 verify_otp(&input).map_or_else(
                     |err| {
-                        error!("{:?}", err);
+                        error!("{err:?}");
                         None
                     },
                     Some,
@@ -153,7 +156,7 @@ impl<'a> Authenticator<'a> for YubicoAuthenticator {
         }
         verify_otp(&cmd[0..44]).map_or_else(
             |err| {
-                error!("{:?}", err);
+                error!("{err:?}");
                 None
             },
             |result| {

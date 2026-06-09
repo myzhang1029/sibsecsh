@@ -60,7 +60,7 @@ impl<'a> Authenticator<'a> for LocalIPAuthenticator<'a> {
                 let cidr: IpCidr = match network.parse() {
                     Ok(ok) => ok,
                     Err(errstr) => {
-                        warn!("Bad CIDR: {:?}", errstr);
+                        warn!("Bad CIDR: {errstr:?}");
                         continue;
                     }
                 };

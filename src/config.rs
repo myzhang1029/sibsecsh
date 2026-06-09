@@ -76,11 +76,8 @@ impl SecRcCfg {
         let mut toml_content: SecRcCfg = toml::from_str(&file_content)?;
         // Override the current value if the incoming one is not `None`
         if let Some(incoming_accepted_ips) = &mut toml_content.accepted_ips {
-            if self.accepted_ips.is_some() {
-                self.accepted_ips
-                    .as_mut()
-                    .unwrap()
-                    .append(incoming_accepted_ips);
+            if let Some(ref mut accepted_ips) = &mut self.accepted_ips {
+                accepted_ips.append(incoming_accepted_ips);
             } else {
                 self.accepted_ips = toml_content.accepted_ips;
             }
@@ -197,9 +194,9 @@ impl SecRcCfg {
                 }
             }
             Err(e) => {
-                warn!("Cannot search for shells: {:?}", e);
+                warn!("Cannot search for shells: {e:?}");
             }
-        };
+        }
         Err(Error::ShellExec(
             Command::new(shell.clone()).args(&args).exec(),
         ))

@@ -56,7 +56,7 @@ pub enum Error {
     SendEmail(#[from] SmtpError),
 }
 
-impl<'a> EmailAuthenticator<'a> {
+impl EmailAuthenticator<'_> {
     fn gen_code() -> u32 {
         rand::random_range(100_000..1_000_000)
     }
@@ -173,7 +173,7 @@ impl<'a> Authenticator<'a> for EmailAuthenticator<'a> {
             print!("Enter your email matching {shadowemail}: ");
             stdout().flush().ok();
             if let Err(error) = stdin.read_line(&mut input) {
-                error!("{}", error);
+                error!("{error}");
                 return None;
             }
             input = input.trim_end().to_string();
@@ -185,7 +185,7 @@ impl<'a> Authenticator<'a> for EmailAuthenticator<'a> {
                 tries = 0;
                 break;
             }
-            warn!("Wrong email {:?}", input);
+            warn!("Wrong email {input:?}");
         }
         if tries != 0 {
             // Maximum number of tries exceeded
@@ -193,7 +193,7 @@ impl<'a> Authenticator<'a> for EmailAuthenticator<'a> {
             return Some(false);
         }
         if let Err(error) = self.send_email("") {
-            error!("{}", error);
+            error!("{error}");
             return None;
         }
         while tries < 3 {
@@ -202,7 +202,7 @@ impl<'a> Authenticator<'a> for EmailAuthenticator<'a> {
             print!("Enter the code sent to your email address, 0 to resend: ");
             stdout().flush().ok();
             if let Err(error) = stdin.read_line(&mut input) {
-                error!("{}", error);
+                error!("{error}");
                 return None;
             }
             let input = input.trim_end().parse();
@@ -210,14 +210,14 @@ impl<'a> Authenticator<'a> for EmailAuthenticator<'a> {
                 // Not counting this one
                 tries -= 1;
                 if let Err(error) = self.send_email("") {
-                    error!("{}", error);
+                    error!("{error}");
                     return None;
                 }
             } else if Ok(self.code) == input {
                 return Some(true);
             } else {
                 // Not 0 nor matched
-                warn!("Wrong login code {:?}", input);
+                warn!("Wrong login code {input:?}");
             }
         }
         // Maximum number of tries exceeded
@@ -238,7 +238,7 @@ impl<'a> Authenticator<'a> for EmailAuthenticator<'a> {
         if cmd == self.config.email.as_ref()? {
             // Send auth code
             if let Err(error) = self.send_email("") {
-                error!("{}", error);
+                error!("{error}");
             }
             // Write the generated code
             match File::create(sib_code_file) {
@@ -246,7 +246,7 @@ impl<'a> Authenticator<'a> for EmailAuthenticator<'a> {
                     file.write_all(self.code.to_string().as_bytes()).ok();
                 }
                 // This is certainly unwanted
-                Err(e) => error!("Create code file failed: {}", e),
+                Err(e) => error!("Create code file failed: {e}"),
             }
             // Cancel execution
             return Some(false);
@@ -269,7 +269,7 @@ impl<'a> Authenticator<'a> for EmailAuthenticator<'a> {
             }
             Err(e) => {
                 // It's probably just chaining to the next authenticator
-                info!("Cannot open code file: {}", e);
+                info!("Cannot open code file: {e}");
                 None
             }
         }
