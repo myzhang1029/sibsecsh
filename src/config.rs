@@ -18,14 +18,13 @@
 //
 
 use crate::ip::get_from;
-use exec::Command;
 use log::warn;
 use serde::Deserialize;
-use std::env;
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io;
 use std::io::prelude::*;
+use std::os::unix::process::CommandExt;
 use thiserror::Error;
 
 /// Type for deserializing a secrc.toml
@@ -62,7 +61,7 @@ pub enum Error {
     #[error("non-standard shell")]
     NonStandardShell,
     #[error("cannot execute shell")]
-    ShellExec(#[from] exec::Error),
+    ShellExec(io::Error),
     #[error("cannot parse TOML: {0}")]
     TomlParse(#[from] toml::de::Error),
 }
@@ -179,7 +178,6 @@ impl SecRcCfg {
             .map(ToString::to_string)
             .collect();
         args.append(&mut additional_params);
-        env::set_var("SIB_FROM_IP", get_from());
         let shell = self
             .shell
             .as_ref()
@@ -197,9 +195,11 @@ impl SecRcCfg {
                 warn!("Cannot search for shells: {e:?}");
             }
         }
-        Err(Error::ShellExec(
-            Command::new(shell.clone()).args(&args).exec(),
-        ))
+        let err = std::process::Command::new(shell)
+            .args(&args)
+            .env("SIB_FROM_IP", get_from())
+            .exec();
+        Err(Error::ShellExec(err))
     }
 }
 
