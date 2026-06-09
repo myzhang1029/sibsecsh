@@ -11,7 +11,7 @@ cidr = "0.3"
 home = "0.5"
 lettre = { version = "0.11", default-features = false, features = ["builder", "rustls-tls", "smtp-transport"] }
 log = "0.4"
-rand = "0.9"
+rand = "0.10"
 regex = "^1, >=1.5.5"
 serde = { version = "1", features = ["derive"] }
 simplelog = "0.12"

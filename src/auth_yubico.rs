@@ -20,7 +20,8 @@
 use crate::auth::Authenticator;
 use crate::config::SecRcCfg;
 use log::error;
-use rand::{Rng, distr::Alphanumeric};
+use rand::RngExt;
+use rand::distr::Alphanumeric;
 use std::collections::BTreeMap;
 use std::io::{Write, stdin, stdout};
 
