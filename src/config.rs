@@ -76,7 +76,7 @@ impl SecRcCfg {
         let mut toml_content: SecRcCfg = toml::from_str(&file_content)?;
         // Override the current value if the incoming one is not `None`
         if let Some(incoming_accepted_ips) = &mut toml_content.accepted_ips {
-            if let Some(ref mut accepted_ips) = &mut self.accepted_ips {
+            if let Some(accepted_ips) = self.accepted_ips.as_mut() {
                 accepted_ips.append(incoming_accepted_ips);
             } else {
                 self.accepted_ips = toml_content.accepted_ips;
