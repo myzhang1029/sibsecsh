@@ -72,7 +72,7 @@ impl SecRcCfg {
         let mut file = File::open(file_path)?;
         let mut file_content = String::new();
         file.read_to_string(&mut file_content)?;
-        let mut toml_content: SecRcCfg = toml::from_str(&file_content)?;
+        let mut toml_content: Self = toml::from_str(&file_content)?;
         // Override the current value if the incoming one is not `None`
         if let Some(incoming_accepted_ips) = &mut toml_content.accepted_ips {
             if let Some(accepted_ips) = self.accepted_ips.as_mut() {
@@ -215,7 +215,7 @@ impl Default for SecRcCfg {
             }
         }
 
-        SecRcCfg {
+        Self {
             accepted_ips: Some(vec![]),
             shell: None,
             // Default to have no args

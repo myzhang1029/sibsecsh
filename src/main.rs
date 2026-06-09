@@ -67,19 +67,19 @@ fn do_check_auth<'a>(
     exec_options.append(&mut other_options);
     match is_accepted {
         Some(value) => {
-            if value {
-                configuration
-                    .execute_shell(exec_options)
-                    .map_err(|e| format!("{e}"))
-            } else {
-                Err("Rejected".to_string())
-            }
+        if value {
+            configuration
+                .execute_shell(exec_options)
+                .map_err(|e| format!("{e}"))
+        } else {
+            Err("Rejected".to_string())
+        }
         }
         None => Ok(()),
     }
 }
 
-#[allow(clippy::needless_pass_by_value)]
+#[expect(clippy::needless_pass_by_value)]
 fn print_err_exit(msg: String) -> Result<(), String> {
     panic!("Sorry: {msg}");
 }

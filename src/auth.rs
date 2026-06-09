@@ -82,7 +82,7 @@ pub struct BypassAuthenticator {}
 
 impl Authenticator<'_> for BypassAuthenticator {
     fn init(_config: &SecRcCfg) -> Self {
-        BypassAuthenticator {}
+        Self {}
     }
 
     fn is_accepted_login(&self) -> Option<bool> {

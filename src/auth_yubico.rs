@@ -104,7 +104,7 @@ fn verify_otp(otp: &str) -> Result<bool, String> {
 
 impl Authenticator<'_> for YubicoAuthenticator {
     fn init(config: &SecRcCfg) -> Self {
-        YubicoAuthenticator {
+        Self {
             yubico_id: if let Some(supplied_yubico_id) = &config.yubico_id {
                 if supplied_yubico_id.len() < 12 {
                     None
